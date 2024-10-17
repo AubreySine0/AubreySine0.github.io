@@ -1,1 +1,29 @@
-Hello World
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Hello World Landing Page</title>
+
+  <!-- OneTrust Cookies Consent Notice start for example.com -->
+  <script src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js"  type="text/javascript" charset="UTF-8" data-domain-script="01929b9b-c505-7cd6-9ca1-67e5e5aa979e-test" ></script>
+  <script type="text/javascript">
+  function OptanonWrapper() { }
+  </script>
+
+  <!-- Add Segment's OneTrust Consent Wrapper -->
+  <script src="https://cdn.jsdelivr.net/npm/@segment/analytics-consent-wrapper-onetrust@latest/dist/umd/analytics-onetrust.umd.js"></script>
+
+  <!-- Add / Modify Segment Analytics Snippet -->
+  <script>
+    !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"];analytics.factory=function(e){return function(){var t=Array.prototype.slice.call(arguments);t.unshift(e);analytics.push(t);return analytics}};for(var e=0;e<analytics.methods.length;e++){var key=analytics.methods[e];analytics[key]=analytics.factory(key)}analytics.load=function(key,e){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(t,n);analytics._loadOptions=e};analytics.SNIPPET_VERSION="4.13.2";
+    // Modify this line by wrapping analytics.load with OneTrust
+    withOneTrust(analytics).load('gmILwcgOaqputqVmLZKtD0eazHCAeNhR'); // replace with your Segment write key
+    analytics.page();}}();
+  </script>
+</head>
+<body>
+  <h1>Hello World</h1>
+</body>
+</html>
