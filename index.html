@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Hello World Landing Page</title>
-
+  <title>Segment Plugin Test Site</title>
+  
+  <!-- Your existing OneTrust setup -->
   <script
     src="https://cdn.cookielaw.org/scripttemplates/otSDKStub.js"
     type="text/javascript"
@@ -16,23 +17,709 @@
     function OptanonWrapper() {}
   </script>
 
-  <!-- Add Segment's OneTrust Consent Wrapper -->
-  <script src="https://cdn.jsdelivr.net/npm/@segment/analytics-consent-wrapper-onetrust@latest/dist/umd/analytics-onetrust.umd.js"></script>
-  <!-- Add / Modify Segment Analytics Snippet -->
-<!--   <script>
-    !function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="gmILwcgOaqputqVmLZKtD0eazHCAeNhR";;analytics.SNIPPET_VERSION="5.2.0";
-    withOneTrust(analytics, { consentModel: () => 'opt-out' }).load("RRBxCklGEjzb3goqVHxJqi4tuQWC6J8i");
-    analytics.page();
-    }}();
-  </script> -->
+  <!-- Your existing Segment Analytics setup -->
   <script>
   !function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="gmILwcgOaqputqVmLZKtD0eazHCAeNhR";;analytics.SNIPPET_VERSION="5.2.0";
   analytics.load("gmILwcgOaqputqVmLZKtD0eazHCAeNhR");
   analytics.page();
   }}();
-</script>
+  </script>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      line-height: 1.6;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      border-left: 4px solid #007cba;
+    }
+    
+    .section h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    
+    button {
+      background: #007cba;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      margin: 5px 10px 5px 0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    button:hover {
+      background: #0056a3;
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    .form-group {
+      margin: 10px 0;
+    }
+    
+    input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 10px;
+      width: 200px;
+    }
+    
+    .debug-info {
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 12px;
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid #e9ecef;
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello World</h1>
+  <div class="container">
+    <h1>🔌 Segment Plugin Test Site</h1>
+    <p class="subtitle">Test your UTM Campaign and Geo Location plugins</p>
+    
+    <!-- Plugin Status Section -->
+    <div class="section">
+      <h3>Plugin Status</h3>
+      <div id="plugin-status" class="status info">
+        Loading plugins...
+      </div>
+      <button onclick="checkPluginStatus()">Refresh Status</button>
+    </div>
+
+    <!-- UTM Testing Section -->
+    <div class="section">
+      <h3>🔗 UTM Campaign Testing</h3>
+      <p>Test UTM campaign source persistence:</p>
+      
+      <button onclick="simulateUTMPage('google')">Simulate UTM: Google</button>
+      <button onclick="simulateUTMPage('facebook')">Simulate UTM: Facebook</button>
+      <button onclick="simulateUTMPage('twitter')">Simulate UTM: Twitter</button>
+      <br><br>
+      <button onclick="clearUTMStorage()">Clear UTM Storage</button>
+      <button onclick="showUTMStorage()">Show Stored UTM</button>
+      
+      <div id="utm-status" class="status" style="display: none;"></div>
+    </div>
+
+    <!-- Event Testing Section -->
+    <div class="section">
+      <h3>📊 Send Test Events</h3>
+      <p>Send events to see plugin enrichment:</p>
+      
+      <div class="form-group">
+        <input type="text" id="track-event" placeholder="Event name" value="Button Clicked">
+        <button onclick="sendTrackEvent()">Send Track Event</button>
+      </div>
+      
+      <div class="form-group">
+        <input type="text" id="user-id" placeholder="User ID" value="test-user-123">
+        <input type="text" id="user-email" placeholder="Email" value="test@example.com">
+        <button onclick="sendIdentifyEvent()">Send Identify Event</button>
+      </div>
+      
+      <div class="form-group">
+        <input type="text" id="page-name" placeholder="Page name" value="Test Page">
+        <button onclick="sendPageEvent()">Send Page Event</button>
+      </div>
+      
+      <button onclick="sendGroupEvent()">Send Group Event</button>
+      <button onclick="sendAliasEvent()">Send Alias Event</button>
+      
+      <div id="event-status" class="status" style="display: none;"></div>
+    </div>
+
+    <!-- Geo Location Section -->
+    <div class="section">
+      <h3>📍 Geo Location Testing</h3>
+      <p>Test location tracking:</p>
+      
+      <button onclick="requestLocationPermission()">Request Location Permission</button>
+      <button onclick="showLocationData()">Show Current Location Data</button>
+      <button onclick="clearGeoStorage()">Clear Geo Storage</button>
+      
+      <div id="geo-status" class="status" style="display: none;"></div>
+    </div>
+
+    <!-- Debug Information -->
+    <div class="section">
+      <h3>🔧 Debug Information</h3>
+      <button onclick="showDebugInfo()">Show Debug Info</button>
+      <button onclick="openSegmentDebugger()">Open Segment Debugger</button>
+      <button onclick="clearAllStorage()">Clear All Plugin Storage</button>
+      
+      <div id="debug-info" class="debug-info" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Plugin definitions (embedded for easy deployment)
+    
+    // UTM Campaign Plugin
+    window.utmCampaignPersistencePlugin = () => {
+      const STORAGE_KEY = 'segment_utm_campaign_source';
+      const EXPIRY_DAYS = 30;
+      
+      const setLocalStorageWithExpiry = (key, value, days) => {
+        try {
+          const now = new Date();
+          const item = {
+            value: value,
+            expiry: now.getTime() + (days * 24 * 60 * 60 * 1000),
+          };
+          localStorage.setItem(key, JSON.stringify(item));
+        } catch (e) {
+          console.warn('UTM Plugin: localStorage not available');
+        }
+      };
+      
+      const getLocalStorageWithExpiry = (key) => {
+        try {
+          const itemStr = localStorage.getItem(key);
+          if (!itemStr) return null;
+          
+          const item = JSON.parse(itemStr);
+          const now = new Date();
+          
+          if (now.getTime() > item.expiry) {
+            localStorage.removeItem(key);
+            return null;
+          }
+          
+          return item.value;
+        } catch (e) {
+          return null;
+        }
+      };
+      
+      return {
+        name: 'UTM Campaign Source Persistence',
+        type: 'enrichment',
+        version: '1.0.0',
+        isLoaded: () => true,
+        load: () => Promise.resolve(),
+        
+        page: (ctx) => {
+          const currentCampaignSource = ctx.event.context?.campaign?.source;
+          
+          if (currentCampaignSource) {
+            console.log(`UTM Plugin: Found campaign source: ${currentCampaignSource}`);
+            setLocalStorageWithExpiry(STORAGE_KEY, currentCampaignSource, EXPIRY_DAYS);
+          } else {
+            const storedCampaignSource = getLocalStorageWithExpiry(STORAGE_KEY);
+            if (storedCampaignSource) {
+              console.log(`UTM Plugin: Adding stored campaign source: ${storedCampaignSource}`);
+              ctx.updateEvent('context.campaign.source', storedCampaignSource);
+            }
+          }
+          
+          return ctx;
+        },
+        
+        track: (ctx) => {
+          const storedCampaignSource = getLocalStorageWithExpiry(STORAGE_KEY);
+          if (storedCampaignSource && !ctx.event.context?.campaign?.source) {
+            ctx.updateEvent('context.campaign.source', storedCampaignSource);
+          }
+          return ctx;
+        },
+        
+        identify: (ctx) => {
+          const storedCampaignSource = getLocalStorageWithExpiry(STORAGE_KEY);
+          if (storedCampaignSource && !ctx.event.context?.campaign?.source) {
+            ctx.updateEvent('context.campaign.source', storedCampaignSource);
+          }
+          return ctx;
+        },
+        
+        group: (ctx) => {
+          const storedCampaignSource = getLocalStorageWithExpiry(STORAGE_KEY);
+          if (storedCampaignSource && !ctx.event.context?.campaign?.source) {
+            ctx.updateEvent('context.campaign.source', storedCampaignSource);
+          }
+          return ctx;
+        },
+        
+        alias: (ctx) => {
+          const storedCampaignSource = getLocalStorageWithExpiry(STORAGE_KEY);
+          if (storedCampaignSource && !ctx.event.context?.campaign?.source) {
+            ctx.updateEvent('context.campaign.source', storedCampaignSource);
+          }
+          return ctx;
+        }
+      };
+    };
+
+    // Simplified Geo Location Plugin  
+    window.geoLocationPlugin = (options = {}) => {
+      const config = {
+        timeout: options.timeout || 10000,
+        enableHighAccuracy: options.enableHighAccuracy !== undefined ? options.enableHighAccuracy : true,
+        autoRequestPermission: options.autoRequestPermission !== undefined ? options.autoRequestPermission : true,
+        cacheLocation: options.cacheLocation !== undefined ? options.cacheLocation : true,
+        cacheExpiry: options.cacheExpiry || 1800000,
+        useIPFallback: options.useIPFallback !== undefined ? options.useIPFallback : true,
+        debug: options.debug || false
+      };
+
+      let locationData = null;
+      let locationPromise = null;
+      let permissionDenied = false;
+
+      const CACHE_KEY = 'segment_geo_location';
+      
+      const log = (message, data) => {
+        if (config.debug) {
+          console.log(`GeoLocation Plugin: ${message}`, data || '');
+        }
+      };
+
+      const getCachedLocation = () => {
+        if (!config.cacheLocation) return null;
+        
+        try {
+          const cached = localStorage.getItem(CACHE_KEY);
+          if (!cached) return null;
+          
+          const data = JSON.parse(cached);
+          const now = Date.now();
+          
+          if (now - data.timestamp > config.cacheExpiry) {
+            localStorage.removeItem(CACHE_KEY);
+            return null;
+          }
+          
+          return data.location;
+        } catch (e) {
+          return null;
+        }
+      };
+
+      const setCachedLocation = (location) => {
+        if (!config.cacheLocation) return;
+        
+        try {
+          const data = { location, timestamp: Date.now() };
+          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        } catch (e) {
+          console.warn('Error caching location');
+        }
+      };
+
+      const getIPLocation = async () => {
+        if (!config.useIPFallback) return null;
+        
+        try {
+          const response = await fetch('https://ipapi.co/json/');
+          const data = await response.json();
+          
+          if (data.latitude && data.longitude) {
+            return {
+              latitude: parseFloat(data.latitude),
+              longitude: parseFloat(data.longitude),
+              city: data.city || undefined,
+              region: data.region || undefined,
+              country: data.country_name || undefined,
+              source: 'ip'
+            };
+          }
+        } catch (error) {
+          log('IP location failed', error);
+        }
+        
+        return null;
+      };
+
+      const getCurrentLocation = () => {
+        if (permissionDenied || !navigator.geolocation) {
+          return Promise.resolve(null);
+        }
+
+        if (locationPromise) return locationPromise;
+
+        const cached = getCachedLocation();
+        if (cached) {
+          locationData = cached;
+          return Promise.resolve(cached);
+        }
+
+        locationPromise = new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const location = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                source: 'gps'
+              };
+
+              locationData = location;
+              setCachedLocation(location);
+              locationPromise = null;
+              resolve(location);
+            },
+            async (error) => {
+              if (error.code === 1) permissionDenied = true;
+              locationPromise = null;
+              
+              const ipLocation = await getIPLocation();
+              if (ipLocation) {
+                locationData = ipLocation;
+                setCachedLocation(ipLocation);
+                resolve(ipLocation);
+              } else {
+                resolve(null);
+              }
+            },
+            {
+              enableHighAccuracy: config.enableHighAccuracy,
+              timeout: config.timeout,
+              maximumAge: 300000
+            }
+          );
+        });
+
+        return locationPromise;
+      };
+
+      const enrichEventWithLocation = (ctx) => {
+        if (!locationData) return ctx;
+
+        const locationContext = {
+          latitude: locationData.latitude.toString(),
+          longitude: locationData.longitude.toString()
+        };
+
+        if (locationData.city) locationContext.city = locationData.city;
+        if (locationData.region) locationContext.region = locationData.region;
+        if (locationData.country) locationContext.country = locationData.country;
+
+        ctx.updateEvent('context.location', locationContext);
+        return ctx;
+      };
+
+      const plugin = {
+        name: 'Geo Location Tracking',
+        type: 'enrichment',
+        version: '1.0.0',
+        
+        isLoaded: () => true,
+        
+        load: async () => {
+          if (config.autoRequestPermission && navigator.geolocation) {
+            getCurrentLocation().catch(() => {});
+          }
+        },
+
+        page: async (ctx) => {
+          if (!locationData && config.autoRequestPermission) {
+            await getCurrentLocation();
+          }
+          return enrichEventWithLocation(ctx);
+        },
+
+        track: async (ctx) => {
+          if (!locationData && config.autoRequestPermission) {
+            await getCurrentLocation();
+          }
+          return enrichEventWithLocation(ctx);
+        },
+
+        identify: async (ctx) => {
+          if (!locationData && config.autoRequestPermission) {
+            await getCurrentLocation();
+          }
+          return enrichEventWithLocation(ctx);
+        },
+
+        group: async (ctx) => {
+          if (!locationData && config.autoRequestPermission) {
+            await getCurrentLocation();
+          }
+          return enrichEventWithLocation(ctx);
+        },
+
+        alias: async (ctx) => {
+          if (!locationData && config.autoRequestPermission) {
+            await getCurrentLocation();
+          }
+          return enrichEventWithLocation(ctx);
+        }
+      };
+
+      plugin.requestLocation = () => getCurrentLocation();
+      plugin.getCurrentLocation = () => locationData;
+      plugin.clearCache = () => {
+        localStorage.removeItem(CACHE_KEY);
+        locationData = null;
+      };
+
+      return plugin;
+    };
+
+    // Initialize plugins when analytics is ready
+    let pluginsLoaded = false;
+    let geoPlugin = null;
+
+    window.analytics.ready(async () => {
+      try {
+        // Register UTM Plugin
+        await window.analytics.register(utmCampaignPersistencePlugin());
+        console.log('✅ UTM Campaign Plugin registered');
+        
+        // Register Geo Plugin with debug enabled
+        geoPlugin = geoLocationPlugin({ 
+          debug: true,
+          autoRequestPermission: false // We'll request manually via button
+        });
+        await window.analytics.register(geoPlugin);
+        console.log('✅ Geo Location Plugin registered');
+        
+        pluginsLoaded = true;
+        updatePluginStatus('success', '✅ Both plugins loaded successfully!');
+        
+      } catch (error) {
+        console.error('❌ Plugin loading failed:', error);
+        updatePluginStatus('error', `❌ Plugin loading failed: ${error.message}`);
+      }
+    });
+
+    // Utility functions
+    function updateStatus(elementId, type, message) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.className = `status ${type}`;
+        element.innerHTML = message;
+        element.style.display = 'block';
+        
+        // Auto-hide after 5 seconds for success messages
+        if (type === 'success') {
+          setTimeout(() => {
+            element.style.display = 'none';
+          }, 5000);
+        }
+      }
+    }
+
+    function updatePluginStatus(type, message) {
+      updateStatus('plugin-status', type, message);
+    }
+
+    // Button click handlers
+    function checkPluginStatus() {
+      if (pluginsLoaded) {
+        updatePluginStatus('success', '✅ Both plugins are loaded and ready');
+      } else {
+        updatePluginStatus('info', '⏳ Waiting for plugins to load...');
+      }
+    }
+
+    function simulateUTMPage(source) {
+      analytics.page(`Test Page - ${source}`, {}, {
+        context: {
+          campaign: {
+            source: source,
+            medium: 'test',
+            campaign: 'plugin_test'
+          }
+        }
+      });
+      
+      updateStatus('utm-status', 'success', `✅ Sent page call with UTM source: ${source}`);
+    }
+
+    function sendTrackEvent() {
+      const eventName = document.getElementById('track-event').value || 'Button Clicked';
+      analytics.track(eventName, {
+        buttonId: 'test-button',
+        timestamp: new Date().toISOString()
+      });
+      
+      updateStatus('event-status', 'success', `✅ Sent track event: ${eventName}`);
+    }
+
+    function sendIdentifyEvent() {
+      const userId = document.getElementById('user-id').value || 'test-user-123';
+      const email = document.getElementById('user-email').value || 'test@example.com';
+      
+      analytics.identify(userId, {
+        email: email,
+        name: 'Test User',
+        testTimestamp: new Date().toISOString()
+      });
+      
+      updateStatus('event-status', 'success', `✅ Sent identify event for user: ${userId}`);
+    }
+
+    function sendPageEvent() {
+      const pageName = document.getElementById('page-name').value || 'Test Page';
+      analytics.page(pageName, {
+        title: pageName,
+        testTimestamp: new Date().toISOString()
+      });
+      
+      updateStatus('event-status', 'success', `✅ Sent page event: ${pageName}`);
+    }
+
+    function sendGroupEvent() {
+      analytics.group('test-org-456', {
+        name: 'Test Organization',
+        industry: 'Technology',
+        testTimestamp: new Date().toISOString()
+      });
+      
+      updateStatus('event-status', 'success', '✅ Sent group event');
+    }
+
+    function sendAliasEvent() {
+      analytics.alias('new-user-id-789');
+      updateStatus('event-status', 'success', '✅ Sent alias event');
+    }
+
+    function requestLocationPermission() {
+      if (geoPlugin) {
+        geoPlugin.requestLocation().then(() => {
+          updateStatus('geo-status', 'success', '✅ Location permission requested');
+        }).catch(error => {
+          updateStatus('geo-status', 'error', `❌ Location request failed: ${error.message}`);
+        });
+      } else {
+        updateStatus('geo-status', 'error', '❌ Geo plugin not loaded yet');
+      }
+    }
+
+    function showLocationData() {
+      if (geoPlugin) {
+        const location = geoPlugin.getCurrentLocation();
+        if (location) {
+          updateStatus('geo-status', 'success', 
+            `📍 Current location: ${location.city || 'Unknown'}, ${location.region || 'Unknown'} (${location.source})`);
+        } else {
+          updateStatus('geo-status', 'info', '📍 No location data available yet');
+        }
+      } else {
+        updateStatus('geo-status', 'error', '❌ Geo plugin not loaded yet');
+      }
+    }
+
+    function clearUTMStorage() {
+      localStorage.removeItem('segment_utm_campaign_source');
+      updateStatus('utm-status', 'success', '🗑️ UTM storage cleared');
+    }
+
+    function showUTMStorage() {
+      const stored = localStorage.getItem('segment_utm_campaign_source');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          updateStatus('utm-status', 'info', `📦 Stored UTM: ${parsed.value} (expires: ${new Date(parsed.expiry).toLocaleString()})`);
+        } catch (e) {
+          updateStatus('utm-status', 'error', '❌ Error reading UTM storage');
+        }
+      } else {
+        updateStatus('utm-status', 'info', '📦 No UTM data stored');
+      }
+    }
+
+    function clearGeoStorage() {
+      if (geoPlugin) {
+        geoPlugin.clearCache();
+        updateStatus('geo-status', 'success', '🗑️ Geo storage cleared');
+      }
+    }
+
+    function clearAllStorage() {
+      localStorage.removeItem('segment_utm_campaign_source');
+      localStorage.removeItem('segment_geo_location');
+      sessionStorage.removeItem('segment_geo_session_captured');
+      updateStatus('debug-info', 'success', '🗑️ All plugin storage cleared');
+    }
+
+    function showDebugInfo() {
+      const debugInfo = {
+        pluginsLoaded: pluginsLoaded,
+        analyticsInitialized: window.analytics.initialized,
+        utmStored: !!localStorage.getItem('segment_utm_campaign_source'),
+        geoStored: !!localStorage.getItem('segment_geo_location'),
+        userAgent: navigator.userAgent,
+        geolocationSupported: !!navigator.geolocation,
+        currentUrl: window.location.href
+      };
+      
+      const element = document.getElementById('debug-info');
+      element.innerHTML = '<pre>' + JSON.stringify(debugInfo, null, 2) + '</pre>';
+      element.style.display = 'block';
+    }
+
+    function openSegmentDebugger() {
+      const writeKey = 'gmILwcgOaqputqVmLZKtD0eazHCAeNhR';
+      window.open(`https://app.segment.com/sources/${writeKey}/debugger`, '_blank');
+    }
+
+    // Auto-check plugin status on load
+    setTimeout(checkPluginStatus, 1000);
+  </script>
 </body>
 </html>
