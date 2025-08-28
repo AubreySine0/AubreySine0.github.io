@@ -312,30 +312,202 @@
       };
     };
 
-    // Simplified Geo Location Plugin  
+    // Enhanced Geo Location Plugin (Full Version)
     window.geoLocationPlugin = (options = {}) => {
       const config = {
         timeout: options.timeout || 10000,
+        maximumAge: options.maximumAge || 300000,
         enableHighAccuracy: options.enableHighAccuracy !== undefined ? options.enableHighAccuracy : true,
         autoRequestPermission: options.autoRequestPermission !== undefined ? options.autoRequestPermission : true,
         cacheLocation: options.cacheLocation !== undefined ? options.cacheLocation : true,
         cacheExpiry: options.cacheExpiry || 1800000,
-        useIPFallback: options.useIPFallback !== undefined ? options.useIPFallback : true,
+        preferGPS: options.preferGPS !== undefined ? options.preferGPS : true,
+        includeIPData: options.includeIPData !== undefined ? options.includeIPData : true,
+        includeISPData: options.includeISPData !== undefined ? options.includeISPData : true,
+        includeTimezone: options.includeTimezone !== undefined ? options.includeTimezone : true,
+        oncePerSession: options.oncePerSession !== undefined ? options.oncePerSession : false,
         debug: options.debug || false
       };
 
       let locationData = null;
       let locationPromise = null;
       let permissionDenied = false;
+      let sessionLocationCaptured = false;
 
-      const CACHE_KEY = 'segment_geo_location';
+      const CACHE_KEY = 'segment_enhanced_geo_location';
+      const SESSION_KEY = 'segment_enhanced_geo_session_captured';
       
       const log = (message, data) => {
         if (config.debug) {
-          console.log(`GeoLocation Plugin: ${message}`, data || '');
+          console.log(`Enhanced Geo Plugin: ${message}`, data || '');
         }
       };
 
+      // Get comprehensive IP-based location data
+      const getIPLocationData = async () => {
+        if (!config.includeIPData) return null;
+        
+        try {
+          log('Fetching comprehensive IP location data');
+          
+          // Use multiple services for comprehensive data
+          const responses = await Promise.allSettled([
+            fetch('https://ipapi.co/json/'),           // Primary - comprehensive
+            fetch('https://ip-api.com/json/'),         // Backup - detailed
+            fetch('https://ipinfo.io/json')            // Backup - ISP data
+          ]);
+          
+          let ipData = {};
+          
+          // Process ipapi.co response (most comprehensive)
+          if (responses[0].status === 'fulfilled') {
+            const data = await responses[0].value.json();
+            if (data.latitude && data.longitude) {
+              ipData = {
+                latitude: parseFloat(data.latitude),
+                longitude: parseFloat(data.longitude),
+                city: data.city || null,
+                region: data.region || null,
+                region_code: data.region_code || null,
+                country: data.country_name || null,
+                country_code: data.country_code || null,
+                country_code_iso3: data.country_code_iso3 || null,
+                postal: data.postal || null,
+                timezone: data.timezone || null,
+                utc_offset: data.utc_offset || null,
+                calling_code: data.country_calling_code || null,
+                currency: data.currency || null,
+                languages: data.languages || null,
+                asn: data.asn || null,
+                org: data.org || null,
+                isp: null, // Will be filled from other sources
+                source: 'ipapi.co'
+              };
+            }
+          }
+          
+          // Enhance with ip-api.com data (better ISP info)
+          if (responses[1].status === 'fulfilled') {
+            const data = await responses[1].value.json();
+            if (data.status === 'success') {
+              ipData.isp = ipData.isp || data.isp;
+              ipData.org = ipData.org || data.org;
+              ipData.as = ipData.as || data.as;
+              ipData.mobile = data.mobile || false;
+              ipData.proxy = data.proxy || false;
+              ipData.hosting = data.hosting || false;
+            }
+          }
+          
+          // Enhance with ipinfo.io data
+          if (responses[2].status === 'fulfilled') {
+            const data = await responses[2].value.json();
+            if (data.loc) {
+              const [lat, lng] = data.loc.split(',').map(parseFloat);
+              ipData.latitude = ipData.latitude || lat;
+              ipData.longitude = ipData.longitude || lng;
+              ipData.city = ipData.city || data.city;
+              ipData.region = ipData.region || data.region;
+              ipData.country = ipData.country || data.country;
+              ipData.postal = ipData.postal || data.postal;
+              ipData.timezone = ipData.timezone || data.timezone;
+              ipData.org = ipData.org || data.org;
+            }
+          }
+          
+          if (ipData.latitude && ipData.longitude) {
+            log('IP location data retrieved', ipData);
+            return ipData;
+          }
+          
+        } catch (error) {
+          log('IP-based location failed', error);
+        }
+        
+        return null;
+      };
+
+      // Get GPS location data
+      const getGPSLocation = () => {
+        if (!navigator.geolocation || permissionDenied) {
+          return Promise.resolve(null);
+        }
+
+        return new Promise((resolve) => {
+          const options = {
+            enableHighAccuracy: config.enableHighAccuracy,
+            timeout: config.timeout,
+            maximumAge: config.maximumAge
+          };
+
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const gpsData = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                altitude: position.coords.altitude || null,
+                altitudeAccuracy: position.coords.altitudeAccuracy || null,
+                heading: position.coords.heading || null,
+                speed: position.coords.speed || null,
+                timestamp: position.timestamp,
+                source: 'gps'
+              };
+
+              log('GPS location retrieved', gpsData);
+              resolve(gpsData);
+            },
+            (error) => {
+              log('GPS location failed', { code: error.code, message: error.message });
+              
+              if (error.code === 1) {
+                permissionDenied = true;
+              }
+              
+              resolve(null);
+            },
+            options
+          );
+        });
+      };
+
+      // Get timezone data
+      const getTimezoneData = () => {
+        if (!config.includeTimezone) return {};
+        
+        try {
+          const timezone = Intl.DateTimeFormat().resolvedOptions();
+          return {
+            timezone: timezone.timeZone,
+            timezone_offset: new Date().getTimezoneOffset() * -1, // Minutes from UTC
+            locale: navigator.language || null,
+            locales: navigator.languages || []
+          };
+        } catch (error) {
+          log('Timezone data failed', error);
+          return {};
+        }
+      };
+
+      // Get connection data
+      const getConnectionData = () => {
+        try {
+          const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+          if (connection) {
+            return {
+              connection_type: connection.effectiveType || null, // 4g, 3g, 2g, slow-2g
+              downlink: connection.downlink || null, // Mbps
+              rtt: connection.rtt || null, // Round trip time in ms
+              save_data: connection.saveData || false
+            };
+          }
+        } catch (error) {
+          log('Connection data failed', error);
+        }
+        return {};
+      };
+
+      // Cache management
       const getCachedLocation = () => {
         if (!config.cacheLocation) return null;
         
@@ -351,8 +523,10 @@
             return null;
           }
           
+          log('Using cached location data', data.location);
           return data.location;
         } catch (e) {
+          log('Error reading cached location', e);
           return null;
         }
       };
@@ -361,115 +535,183 @@
         if (!config.cacheLocation) return;
         
         try {
-          const data = { location, timestamp: Date.now() };
+          const data = {
+            location,
+            timestamp: Date.now()
+          };
           localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+          log('Cached location data', location);
         } catch (e) {
-          console.warn('Error caching location');
+          log('Error caching location', e);
         }
       };
 
-      const getIPLocation = async () => {
-        if (!config.useIPFallback) return null;
-        
-        try {
-          const response = await fetch('https://ipapi.co/json/');
-          const data = await response.json();
-          
-          if (data.latitude && data.longitude) {
-            return {
-              latitude: parseFloat(data.latitude),
-              longitude: parseFloat(data.longitude),
-              city: data.city || undefined,
-              region: data.region || undefined,
-              country: data.country_name || undefined,
-              source: 'ip'
-            };
-          }
-        } catch (error) {
-          log('IP location failed', error);
-        }
-        
-        return null;
+      // Session management
+      const wasLocationCapturedThisSession = () => {
+        if (!config.oncePerSession) return false;
+        return sessionStorage.getItem(SESSION_KEY) === 'true';
       };
 
-      const getCurrentLocation = () => {
-        if (permissionDenied || !navigator.geolocation) {
-          return Promise.resolve(null);
+      const markLocationCapturedThisSession = () => {
+        if (config.oncePerSession) {
+          sessionStorage.setItem(SESSION_KEY, 'true');
+          sessionLocationCaptured = true;
+        }
+      };
+
+      // Main location gathering function
+      const getCurrentLocation = async () => {
+        // Check session limits
+        if (config.oncePerSession && wasLocationCapturedThisSession()) {
+          log('Location already captured this session, using cached data');
+          return locationData;
         }
 
-        if (locationPromise) return locationPromise;
+        // Return existing promise if in progress
+        if (locationPromise) {
+          return locationPromise;
+        }
 
+        // Check cache
         const cached = getCachedLocation();
         if (cached) {
           locationData = cached;
-          return Promise.resolve(cached);
+          return cached;
         }
 
-        locationPromise = new Promise((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const location = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                source: 'gps'
-              };
+        log('Gathering comprehensive location data...');
 
-              locationData = location;
-              setCachedLocation(location);
-              locationPromise = null;
-              resolve(location);
-            },
-            async (error) => {
-              if (error.code === 1) permissionDenied = true;
-              locationPromise = null;
-              
-              const ipLocation = await getIPLocation();
-              if (ipLocation) {
-                locationData = ipLocation;
-                setCachedLocation(ipLocation);
-                resolve(ipLocation);
-              } else {
-                resolve(null);
-              }
-            },
-            {
-              enableHighAccuracy: config.enableHighAccuracy,
-              timeout: config.timeout,
-              maximumAge: 300000
+        locationPromise = (async () => {
+          try {
+            const [gpsData, ipData] = await Promise.all([
+              config.preferGPS ? getGPSLocation() : Promise.resolve(null),
+              getIPLocationData()
+            ]);
+
+            // Combine GPS and IP data
+            let combinedData = {};
+
+            if (config.preferGPS && gpsData) {
+              // Use GPS as primary, IP as enhancement
+              combinedData = {
+                ...gpsData,
+                // Enhance GPS with IP-derived location names
+                city: ipData?.city || null,
+                region: ipData?.region || null,
+                country: ipData?.country || null,
+                country_code: ipData?.country_code || null,
+                postal: ipData?.postal || null,
+                timezone: ipData?.timezone || null,
+                isp: ipData?.isp || null,
+                org: ipData?.org || null,
+                data_source: 'gps_enhanced'
+              };
+            } else if (ipData) {
+              // Use IP data as primary
+              combinedData = {
+                ...ipData,
+                data_source: 'ip'
+              };
             }
-          );
-        });
+
+            // Add timezone data
+            const timezoneData = getTimezoneData();
+            combinedData = { ...combinedData, ...timezoneData };
+
+            // Add connection data
+            const connectionData = getConnectionData();
+            combinedData = { ...combinedData, ...connectionData };
+
+            if (combinedData.latitude && combinedData.longitude) {
+              locationData = combinedData;
+              setCachedLocation(combinedData);
+              markLocationCapturedThisSession();
+              log('Complete location data gathered', combinedData);
+            } else {
+              log('No location data available');
+              locationData = null;
+            }
+
+            locationPromise = null;
+            return locationData;
+            
+          } catch (error) {
+            log('Location gathering failed', error);
+            locationPromise = null;
+            return null;
+          }
+        })();
 
         return locationPromise;
       };
 
+      // Format data for Amplitude compatibility
+      const formatForAmplitude = (locationData) => {
+        if (!locationData) return {};
+
+        // Core Amplitude location format
+        const amplitudeLocation = {
+          latitude: locationData.latitude?.toString() || null,
+          longitude: locationData.longitude?.toString() || null
+        };
+
+        // Add optional Amplitude fields
+        if (locationData.city) amplitudeLocation.city = locationData.city;
+        if (locationData.region) amplitudeLocation.region = locationData.region;
+        if (locationData.country) amplitudeLocation.country = locationData.country;
+        
+        // Add extended data as custom properties
+        const extendedData = {};
+        
+        if (locationData.country_code) extendedData.country_code = locationData.country_code;
+        if (locationData.postal) extendedData.postal_code = locationData.postal;
+        if (locationData.timezone) extendedData.timezone = locationData.timezone;
+        if (locationData.isp) extendedData.isp = locationData.isp;
+        if (locationData.org) extendedData.organization = locationData.org;
+        if (locationData.connection_type) extendedData.connection_type = locationData.connection_type;
+        if (locationData.accuracy) extendedData.gps_accuracy = locationData.accuracy;
+        if (locationData.data_source) extendedData.location_source = locationData.data_source;
+
+        return { amplitudeLocation, extendedData };
+      };
+
+      // Enrich events with location data
       const enrichEventWithLocation = (ctx) => {
         if (!locationData) return ctx;
 
-        const locationContext = {
-          latitude: locationData.latitude.toString(),
-          longitude: locationData.longitude.toString()
-        };
+        const { amplitudeLocation, extendedData } = formatForAmplitude(locationData);
 
-        if (locationData.city) locationContext.city = locationData.city;
-        if (locationData.region) locationContext.region = locationData.region;
-        if (locationData.country) locationContext.country = locationData.country;
+        // Set core location (matches Amplitude format)
+        if (amplitudeLocation.latitude && amplitudeLocation.longitude) {
+          ctx.updateEvent('context.location', amplitudeLocation);
+        }
 
-        ctx.updateEvent('context.location', locationContext);
+        // Add extended location data as properties
+        Object.entries(extendedData).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            ctx.updateEvent(`properties.${key}`, value);
+          }
+        });
+
+        log('Event enriched with comprehensive location data', { amplitudeLocation, extendedData });
         return ctx;
       };
 
+      // Plugin definition
       const plugin = {
-        name: 'Geo Location Tracking',
+        name: 'Enhanced Geo Location Tracking',
         type: 'enrichment',
-        version: '1.0.0',
+        version: '2.0.0',
         
         isLoaded: () => true,
         
         load: async () => {
+          log('Initializing enhanced geo location plugin', config);
+          
           if (config.autoRequestPermission && navigator.geolocation) {
-            getCurrentLocation().catch(() => {});
+            getCurrentLocation().catch(() => {
+              log('Background location gathering failed');
+            });
           }
         },
 
@@ -509,11 +751,19 @@
         }
       };
 
+      // Public methods
       plugin.requestLocation = () => getCurrentLocation();
       plugin.getCurrentLocation = () => locationData;
       plugin.clearCache = () => {
         localStorage.removeItem(CACHE_KEY);
+        sessionStorage.removeItem(SESSION_KEY);
         locationData = null;
+        sessionLocationCaptured = false;
+        log('Cache cleared');
+      };
+      plugin.getLocationSummary = () => {
+        if (!locationData) return 'No location data available';
+        return `${locationData.city || 'Unknown City'}, ${locationData.region || 'Unknown Region'}, ${locationData.country || 'Unknown Country'} (${locationData.data_source || 'unknown source'})`;
       };
 
       return plugin;
@@ -532,7 +782,11 @@
         // Register Geo Plugin with debug enabled
         geoPlugin = geoLocationPlugin({ 
           debug: true,
-          autoRequestPermission: false // We'll request manually via button
+          autoRequestPermission: false, // We'll request manually via button
+          preferGPS: true,               // Prefer GPS over IP when available  
+          includeIPData: true,           // Include comprehensive IP location data
+          includeISPData: true,          // Include ISP and organization data
+          includeTimezone: true          // Include timezone information
         });
         await window.analytics.register(geoPlugin);
         console.log('✅ Geo Location Plugin registered');
@@ -692,8 +946,8 @@
 
     function clearAllStorage() {
       localStorage.removeItem('segment_utm_campaign_source');
-      localStorage.removeItem('segment_geo_location');
-      sessionStorage.removeItem('segment_geo_session_captured');
+      localStorage.removeItem('segment_enhanced_geo_location');
+      sessionStorage.removeItem('segment_enhanced_geo_session_captured');
       updateStatus('debug-info', 'success', '🗑️ All plugin storage cleared');
     }
 
@@ -702,10 +956,15 @@
         pluginsLoaded: pluginsLoaded,
         analyticsInitialized: window.analytics.initialized,
         utmStored: !!localStorage.getItem('segment_utm_campaign_source'),
-        geoStored: !!localStorage.getItem('segment_geo_location'),
+        geoStored: !!localStorage.getItem('segment_enhanced_geo_location'),
         userAgent: navigator.userAgent,
         geolocationSupported: !!navigator.geolocation,
-        currentUrl: window.location.href
+        currentUrl: window.location.href,
+        connectionInfo: navigator.connection ? {
+          effectiveType: navigator.connection.effectiveType,
+          downlink: navigator.connection.downlink,
+          rtt: navigator.connection.rtt
+        } : 'Not available'
       };
       
       const element = document.getElementById('debug-info');
