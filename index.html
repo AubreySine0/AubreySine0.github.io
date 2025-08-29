@@ -237,6 +237,7 @@
       <button onclick="showIntegrations()">Show Loaded Integrations</button>
       <button onclick="checkNetworkRequests()">Check Network Requests</button>
       <button onclick="testSessionId()">Check Amplitude Session ID</button>
+      <button onclick="testCurrentSessionId()">Test Current Session ID</button>
       <button onclick="openSegmentDebugger()">Open Segment Debugger</button>
       
       <div id="debug-info" class="debug-info" style="display: none;"></div>
@@ -389,103 +390,84 @@
       };
     };
 
-    // Session ID Plugin - Creates session IDs like Amplitude Actions does
+    // Session ID Plugin - Retrieves actual Amplitude session ID and adds to integrations
     window.sessionIdPlugin = () => {
-      const SESSION_STORAGE_KEY = 'analytics_session_id';
-      const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
       
-      const generateSessionId = () => {
-        // Generate session ID similar to Amplitude's format: timestamp + random
-        return Date.now().toString() + Math.random().toString(36).substring(2);
-      };
-      
-      const getOrCreateSessionId = () => {
+      const getAmplitudeSessionId = () => {
         try {
-          // First, check if there's an existing Amplitude session ID (from legacy SDK)
-          const amplitudeSessionId = localStorage.getItem('analytics_session_id');
-          if (amplitudeSessionId) {
-            console.log('📊 Using existing Amplitude session ID:', amplitudeSessionId);
-            return amplitudeSessionId;
-          }
-          
-          // Check our custom session storage
-          const stored = localStorage.getItem(SESSION_STORAGE_KEY + '_custom');
-          if (stored) {
-            try {
-              const sessionData = JSON.parse(stored);
-              const now = Date.now();
-              
-              // Check if session is still valid (within 30 minutes of last activity)
-              if (now - sessionData.lastActivity < SESSION_TIMEOUT) {
-                // Update last activity time to extend session
-                sessionData.lastActivity = now;
-                localStorage.setItem(SESSION_STORAGE_KEY + '_custom', JSON.stringify(sessionData));
-                console.log('🔄 Extended existing session:', sessionData.sessionId);
-                return sessionData.sessionId;
-              } else {
-                console.log('⏰ Session expired, creating new one');
-                localStorage.removeItem(SESSION_STORAGE_KEY + '_custom');
-              }
-            } catch (e) {
-              console.warn('Error parsing stored session, creating new one');
-              localStorage.removeItem(SESSION_STORAGE_KEY + '_custom');
+          // Method 1: Direct API call (most reliable) - CHECK FIRST
+          if (window.amplitude && typeof window.amplitude.getSessionId === 'function') {
+            const sessionId = window.amplitude.getSessionId();
+            if (sessionId) {
+              console.log('📊 Found Amplitude session ID via getSessionId():', sessionId);
+              return sessionId;
             }
           }
           
-          // Create new session ID (similar to Amplitude Actions plugin)
-          const newSessionId = generateSessionId();
-          const sessionData = {
-            sessionId: newSessionId,
-            startTime: Date.now(),
-            lastActivity: Date.now()
-          };
+          // Method 2: Check if there's an instance with getSessionId
+          if (window.amplitude && window.amplitude.getInstance) {
+            try {
+              const instance = window.amplitude.getInstance();
+              if (instance && typeof instance.getSessionId === 'function') {
+                const sessionId = instance.getSessionId();
+                if (sessionId) {
+                  console.log('📊 Found Amplitude session ID via getInstance():', sessionId);
+                  return sessionId;
+                }
+              }
+            } catch (e) {
+              console.log('Instance method failed, trying other methods...');
+            }
+          }
           
-          localStorage.setItem(SESSION_STORAGE_KEY + '_custom', JSON.stringify(sessionData));
+          // Method 3: Check Amplitude's default instance
+          if (window.amplitude && window.amplitude.options && window.amplitude._sessionId) {
+            const sessionId = window.amplitude._sessionId;
+            if (sessionId) {
+              console.log('📊 Found Amplitude session ID via _sessionId:', sessionId);
+              return sessionId;
+            }
+          }
           
-          // Also store in the standard location for compatibility
-          localStorage.setItem(SESSION_STORAGE_KEY, newSessionId);
-          
-          console.log('✨ Created new analytics session:', newSessionId);
-          return newSessionId;
+          console.log('⏳ No Amplitude session ID available via API - Amplitude may not be ready yet');
+          return null;
           
         } catch (error) {
-          console.warn('Session ID Plugin: localStorage not available, using temporary session');
-          // Fallback for browsers without localStorage
-          return 'temp_' + generateSessionId();
+          console.warn('Session ID Plugin: Error retrieving Amplitude session ID', error);
+          return null;
         }
       };
       
       const addSessionIdToEvent = (ctx) => {
-        const sessionId = getOrCreateSessionId();
+        const sessionId = getAmplitudeSessionId();
         
-        // Add to multiple places for maximum compatibility
-        ctx.updateEvent('properties.analytics_session_id', sessionId);
-        ctx.updateEvent('context.sessionId', sessionId);
-        ctx.updateEvent('context.session_id', sessionId); // Alternative naming
-        
-        // Also add session start time for analytics
-        try {
-          const sessionData = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY + '_custom') || '{}');
-          if (sessionData.startTime) {
-            ctx.updateEvent('properties.session_start_time', sessionData.startTime);
-          }
-        } catch (e) {
-          // Ignore errors
+        if (sessionId) {
+          // Add to the integrations object exactly as requested
+          ctx.updateEvent('integrations.Amplitude.session_id', sessionId);
+          
+          // Also add to other locations for broader compatibility
+          ctx.updateEvent('properties.analytics_session_id', sessionId);
+          ctx.updateEvent('context.sessionId', sessionId);
+          
+          console.log('✅ Added Amplitude session ID to event integrations:', sessionId);
+        } else {
+          console.log('⏳ Amplitude session ID not available - skipping for this event');
         }
         
-        console.log('✅ Added session ID to event:', sessionId);
         return ctx;
       };
       
       return {
-        name: 'Analytics Session ID (Amplitude Actions Compatible)',
+        name: 'Amplitude Session ID Passthrough',
         type: 'enrichment',
-        version: '2.0.0',
+        version: '4.0.0',
         isLoaded: () => true,
         load: () => {
-          console.log('🔌 Session ID plugin loaded - will create/manage session IDs like Amplitude Actions');
-          // Initialize session on load
-          getOrCreateSessionId();
+          console.log('🔌 Session ID plugin loaded - will retrieve actual Amplitude session IDs via API');
+          
+          // Don't try to get session ID immediately - Amplitude may not be ready yet
+          // Let each event try to get the session ID when it fires
+          
           return Promise.resolve();
         },
         
@@ -779,71 +761,160 @@
     }
     
     function testSessionId() {
-      // Check for both custom and Amplitude session IDs
+      // Test all methods of getting Amplitude session ID
       try {
-        const amplitudeSessionId = localStorage.getItem('analytics_session_id');
-        const customSessionData = localStorage.getItem('analytics_session_id_custom');
+        console.log('🔍 Testing Amplitude session ID retrieval methods...');
         
-        let sessionInfo = '';
+        let sessionInfo = '<h5>🔍 Amplitude Session ID Detection:</h5>';
+        let foundSessionId = null;
         
-        // Check for legacy Amplitude session ID
-        if (amplitudeSessionId) {
+        // Method 1: Direct API call
+        if (window.amplitude && typeof window.amplitude.getSessionId === 'function') {
+          try {
+            const sessionId = window.amplitude.getSessionId();
+            if (sessionId) {
+              foundSessionId = sessionId;
+              sessionInfo += `
+                <div class="status success">
+                  ✅ <strong>Method 1 - Direct API:</strong> <code>window.amplitude.getSessionId()</code><br>
+                  Session ID: <code>${sessionId}</code>
+                </div>
+              `;
+            } else {
+              sessionInfo += `
+                <div class="status warning">
+                  ⚠️ <strong>Method 1:</strong> API available but returned null/undefined
+                </div>
+              `;
+            }
+          } catch (e) {
+            sessionInfo += `
+              <div class="status error">
+                ❌ <strong>Method 1:</strong> API call failed: ${e.message}
+              </div>
+            `;
+          }
+        } else {
           sessionInfo += `
-            <div class="status success">
-              ✅ <strong>Amplitude Session ID Found:</strong><br>
-              <code>${amplitudeSessionId}</code>
+            <div class="status info">
+              ℹ️ <strong>Method 1:</strong> <code>window.amplitude.getSessionId</code> not available
             </div>
           `;
         }
         
-        // Check for our custom session ID
-        if (customSessionData) {
+        // Method 2: Instance method
+        if (window.amplitude && window.amplitude.getInstance) {
           try {
-            const sessionData = JSON.parse(customSessionData);
-            const ageMinutes = Math.round((Date.now() - sessionData.lastActivity) / (1000 * 60));
-            const sessionAgeMinutes = Math.round((Date.now() - sessionData.startTime) / (1000 * 60));
-            
-            sessionInfo += `
-              <div class="status success">
-                ✅ <strong>Custom Session ID Found:</strong><br>
-                <code>${sessionData.sessionId}</code><br>
-                <small>Session age: ${sessionAgeMinutes} minutes | Last activity: ${ageMinutes} minutes ago</small>
-              </div>
-            `;
+            const instance = window.amplitude.getInstance();
+            if (instance && typeof instance.getSessionId === 'function') {
+              const sessionId = instance.getSessionId();
+              if (sessionId) {
+                if (!foundSessionId) foundSessionId = sessionId;
+                sessionInfo += `
+                  <div class="status success">
+                    ✅ <strong>Method 2 - Instance API:</strong> <code>window.amplitude.getInstance().getSessionId()</code><br>
+                    Session ID: <code>${sessionId}</code>
+                  </div>
+                `;
+              }
+            }
           } catch (e) {
             sessionInfo += `
               <div class="status error">
-                ❌ <strong>Custom Session Data Corrupted</strong><br>
-                <button onclick="clearSession()">Clear & Recreate</button>
+                ❌ <strong>Method 2:</strong> Instance method failed: ${e.message}
               </div>
             `;
           }
         }
         
-        if (!amplitudeSessionId && !customSessionData) {
-          sessionInfo = `
+        // Check storage methods
+        const storageLocations = [
+          { type: 'localStorage', storage: localStorage },
+          { type: 'sessionStorage', storage: sessionStorage }
+        ];
+        
+        const possibleKeys = [
+          'amplitude_session_id',
+          'AMP_session_id', 
+          'amp_session_id',
+          'analytics_session_id'
+        ];
+        
+        storageLocations.forEach(({ type, storage }) => {
+          possibleKeys.forEach(key => {
+            try {
+              const stored = storage.getItem(key);
+              if (stored) {
+                if (!foundSessionId) foundSessionId = stored;
+                sessionInfo += `
+                  <div class="status success">
+                    ✅ <strong>${type}:</strong> Found in <code>${key}</code><br>
+                    Value: <code>${stored}</code>
+                  </div>
+                `;
+              }
+            } catch (e) {
+              // Ignore storage errors
+            }
+          });
+        });
+        
+        // Summary
+        if (foundSessionId) {
+          sessionInfo += `
+            <div class="status success">
+              <h5>🎉 Session ID Available!</h5>
+              <p>The plugin will use: <code>${foundSessionId}</code></p>
+              <p>This will be added to events as:</p>
+              <pre>{
+  "integrations": {
+    "Amplitude": {
+      "session_id": ${foundSessionId}
+    }
+  }
+}</pre>
+            </div>
+          `;
+        } else {
+          sessionInfo += `
             <div class="status warning">
-              ⚠️ <strong>No Session ID Found</strong><br>
-              Since you're using <strong>Amplitude Actions</strong> (cloud-mode), there's no client-side session storage.<br>
-              The plugin will create and manage session IDs for you.
+              <h5>⚠️ No Session ID Found</h5>
+              <p>Possible reasons:</p>
+              <ul>
+                <li>Amplitude SDK hasn't loaded yet</li>
+                <li>No events have been sent to create a session</li>
+                <li>Amplitude is configured differently</li>
+              </ul>
+              <p>Try sending an event first, then check again.</p>
             </div>
           `;
         }
         
+        // Debug info about Amplitude object
+        sessionInfo += '<h5>🔧 Amplitude Object Debug:</h5>';
+        if (window.amplitude) {
+          sessionInfo += `<p>✅ <code>window.amplitude</code> exists</p>`;
+          sessionInfo += `<p>Methods available: ${Object.getOwnPropertyNames(window.amplitude).filter(prop => typeof window.amplitude[prop] === 'function').join(', ')}</p>`;
+          
+          if (window.amplitude.getInstance) {
+            try {
+              const instance = window.amplitude.getInstance();
+              sessionInfo += `<p>✅ Instance available, methods: ${instance ? Object.getOwnPropertyNames(instance).filter(prop => typeof instance[prop] === 'function').join(', ') : 'none'}</p>`;
+            } catch (e) {
+              sessionInfo += `<p>❌ Instance error: ${e.message}</p>`;
+            }
+          }
+        } else {
+          sessionInfo += `<p>❌ <code>window.amplitude</code> not found</p>`;
+        }
+        
         const element = document.getElementById('debug-info');
         element.innerHTML = `
-          <h4>🔐 Session ID Status:</h4>
+          <h4>🔐 Amplitude Session ID Detection Results:</h4>
           ${sessionInfo}
-          <h5>📋 Session Management Modes:</h5>
-          <ul>
-            <li><strong>Amplitude Actions (current):</strong> No client storage, server-side session management</li>
-            <li><strong>Legacy Device-Mode:</strong> Amplitude SDK stores session in localStorage</li>
-            <li><strong>Custom Plugin:</strong> We create and manage sessions like Actions does</li>
-          </ul>
-          <p><strong>Current Mode:</strong> Using custom plugin to replicate Amplitude Actions behavior</p>
           <button onclick="sendTestEventWithSession()">Send Test Event</button>
           <button onclick="refreshSessionCheck()">Refresh Check</button>
-          <button onclick="clearSession()">Clear Session</button>
+          <button onclick="callAmplitudeDirectly()">Call Amplitude API Directly</button>
         `;
         element.style.display = 'block';
         
@@ -853,16 +924,84 @@
       }
     }
     
-    function clearSession() {
-      // Clear both Amplitude and custom session IDs
-      localStorage.removeItem('analytics_session_id');
-      localStorage.removeItem('analytics_session_id_custom');
+    function callAmplitudeDirectly() {
+      // Directly test calling Amplitude API
+      console.log('🧪 Direct Amplitude API test...');
       
-      console.log('🗑️ Cleared all session data');
-      updateStatus('debug-info', 'success', '🔄 Session data cleared! Plugin will create new session on next event.');
+      if (window.amplitude && typeof window.amplitude.getSessionId === 'function') {
+        const sessionId = window.amplitude.getSessionId();
+        console.log('Direct call result:', sessionId);
+        alert(`Direct Amplitude API call result: ${sessionId}`);
+      } else {
+        alert('window.amplitude.getSessionId is not available');
+      }
+    }
+    
+    function sendTestEventWithSession() {
+      // Send a test track event to see if session ID gets added
+      console.log('🧪 Sending test event to check session ID integration...');
       
-      // Refresh the session check display
-      setTimeout(testSessionId, 500);
+      window.analytics.track('Test Session ID Integration', {
+        testType: 'amplitude_session_integration',
+        timestamp: new Date().toISOString(),
+        testNote: 'Check if session_id appears in integrations.Amplitude.session_id'
+      });
+      
+      updateStatus('debug-info', 'success', '✅ Test event sent! Check Segment debugger - look for session_id in integrations.Amplitude');
+    }
+    
+    function refreshSessionCheck() {
+      testSessionId();
+    }
+    
+    function testCurrentSessionId() {
+      // Simple test to see what session ID we're getting right now
+      console.log('🔍 Testing current Amplitude session ID...');
+      
+      if (window.amplitude && typeof window.amplitude.getSessionId === 'function') {
+        const currentSessionId = window.amplitude.getSessionId();
+        console.log('Current Amplitude session ID:', currentSessionId);
+        
+        const element = document.getElementById('debug-info');
+        element.innerHTML = `
+          <h4>🔐 Current Session ID Test:</h4>
+          <div class="status success">
+            <strong>Current Amplitude Session ID:</strong><br>
+            <code>${currentSessionId}</code>
+          </div>
+          <p>This is what the plugin should be using for all events.</p>
+          <button onclick="sendTestEventNow()">Send Test Event Now</button>
+        `;
+        element.style.display = 'block';
+        
+      } else {
+        const element = document.getElementById('debug-info');
+        element.innerHTML = `
+          <div class="status error">
+            <h4>❌ Amplitude API Not Available</h4>
+            <p><code>window.amplitude.getSessionId</code> is not a function.</p>
+            <p>Amplitude may not be loaded yet or configured differently.</p>
+          </div>
+        `;
+        element.style.display = 'block';
+      }
+    }
+    
+    function sendTestEventNow() {
+      // Get the current session ID and send an event to test
+      const currentSessionId = window.amplitude && window.amplitude.getSessionId ? window.amplitude.getSessionId() : null;
+      
+      console.log('🧪 Sending test event. Expected session ID:', currentSessionId);
+      
+      window.analytics.track('Session ID Test Event', {
+        testType: 'session_id_verification',
+        expectedSessionId: currentSessionId,
+        timestamp: new Date().toISOString(),
+        note: 'Check if this matches the session_id in integrations.Amplitude'
+      });
+      
+      updateStatus('debug-info', 'success', 
+        `✅ Test event sent! Expected session ID: ${currentSessionId}<br>Check Segment debugger for integrations.Amplitude.session_id`);
     }
     
     // Utility function to update status elements
