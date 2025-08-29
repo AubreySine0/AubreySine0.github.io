@@ -235,6 +235,8 @@
       <h3>🔧 Debug Information</h3>
       <button onclick="showDebugInfo()">Show Debug Info</button>
       <button onclick="showIntegrations()">Show Loaded Integrations</button>
+      <button onclick="checkNetworkRequests()">Check Network Requests</button>
+      <button onclick="testSessionId()">Check Amplitude Session ID</button>
       <button onclick="openSegmentDebugger()">Open Segment Debugger</button>
       
       <div id="debug-info" class="debug-info" style="display: none;"></div>
@@ -386,6 +388,64 @@
         identify: (ctx) => enrichEventWithLocation(ctx)
       };
     };
+
+    // Session ID Plugin - Retrieves analytics_session_id from Amplitude's localStorage
+    window.sessionIdPlugin = () => {
+      const AMPLITUDE_SESSION_KEY = 'analytics_session_id';
+      
+      const getAmplitudeSessionId = () => {
+        try {
+          // Try to get Amplitude's session ID directly
+          const amplitudeSessionId = localStorage.getItem(AMPLITUDE_SESSION_KEY);
+          
+          if (amplitudeSessionId) {
+            console.log('📊 Found Amplitude session ID:', amplitudeSessionId);
+            return amplitudeSessionId;
+          }
+          
+          // If no Amplitude session ID exists yet, return null
+          // (Amplitude will create one after it loads)
+          console.log('⏳ No Amplitude session ID found yet - will be available after Amplitude loads');
+          return null;
+          
+        } catch (error) {
+          console.warn('Session ID Plugin: Error accessing localStorage', error);
+          return null;
+        }
+      };
+      
+      const addSessionIdToEvent = (ctx) => {
+        const sessionId = getAmplitudeSessionId();
+        
+        if (sessionId) {
+          // Add to both properties and context for maximum compatibility
+          ctx.updateEvent('properties.analytics_session_id', sessionId);
+          ctx.updateEvent('context.sessionId', sessionId);
+          console.log('✅ Added Amplitude session ID to event:', sessionId);
+        } else {
+          console.log('⏳ Amplitude session ID not yet available - skipping for this event');
+        }
+        
+        return ctx;
+      };
+      
+      return {
+        name: 'Amplitude Session ID Retriever',
+        type: 'enrichment',
+        version: '1.0.0',
+        isLoaded: () => true,
+        load: () => {
+          console.log('🔌 Session ID plugin loaded - will retrieve Amplitude session IDs');
+          return Promise.resolve();
+        },
+        
+        page: (ctx) => addSessionIdToEvent(ctx),
+        track: (ctx) => addSessionIdToEvent(ctx),
+        identify: (ctx) => addSessionIdToEvent(ctx),
+        group: (ctx) => addSessionIdToEvent(ctx),
+        alias: (ctx) => addSessionIdToEvent(ctx)
+      };
+    };
     
     // Register plugins function (called from analytics.ready)
     async function registerPlugins() {
@@ -401,6 +461,10 @@
         }));
         console.log('✅ Geo Location Plugin registered');
         
+        // Register Session ID Plugin
+        await window.analytics.register(window.sessionIdPlugin());
+        console.log('✅ Session ID Plugin registered');
+        
         pluginsRegistered = true;
         return true;
         
@@ -414,10 +478,21 @@
     function updateReadyStatus() {
       analyticsReady = true;
       const statusEl = document.getElementById('ready-status');
-      const integrations = Object.keys(window.analytics._integrations || {});
+      
+      // Check multiple sources for integration count
+      const _integrations = Object.keys(window.analytics._integrations || {});
+      const settingsIntegrations = window.analytics.settings?.cdnSettings?.integrations || {};
+      const configuredCount = Object.keys(settingsIntegrations).length;
+      const loadedCount = _integrations.length;
+      
+      console.log('📊 Integration Status:');
+      console.log('  - Configured in settings:', configuredCount);
+      console.log('  - Loaded as SDKs:', loadedCount);
+      console.log('  - Settings integrations:', Object.keys(settingsIntegrations));
+      console.log('  - Loaded SDK integrations:', _integrations);
       
       statusEl.className = 'status success';
-      statusEl.innerHTML = `✅ Analytics ready! Loaded ${integrations.length} destination SDKs: ${integrations.join(', ') || 'none'}`;
+      statusEl.innerHTML = `✅ Analytics ready! ${configuredCount} configured integrations, ${loadedCount} loaded SDKs`;
     }
     
     // UI Event Handlers
@@ -425,9 +500,13 @@
       const statusEl = document.getElementById('ready-status');
       
       if (window.analytics.initialized) {
-        const integrations = Object.keys(window.analytics._integrations || {});
+        const _integrations = Object.keys(window.analytics._integrations || {});
+        const settingsIntegrations = window.analytics.settings?.cdnSettings?.integrations || {};
+        const configuredCount = Object.keys(settingsIntegrations).length;
+        const loadedCount = _integrations.length;
+        
         statusEl.className = 'status success';
-        statusEl.innerHTML = `✅ Analytics initialized with ${integrations.length} integrations: ${integrations.join(', ') || 'none'}`;
+        statusEl.innerHTML = `✅ Analytics initialized: ${configuredCount} configured, ${loadedCount} SDKs loaded`;
       } else {
         statusEl.className = 'status warning';
         statusEl.innerHTML = '⏳ Still loading...';
@@ -491,11 +570,33 @@
     }
     
     function showDebugInfo() {
+      console.log('=== SEGMENT DEBUG INFO ===');
+      console.log('window.analytics:', window.analytics);
+      console.log('analytics.settings:', window.analytics.settings);
+      console.log('cdnSettings:', window.analytics.settings?.cdnSettings);
+      console.log('cdnSettings.integrations:', window.analytics.settings?.cdnSettings?.integrations);
+      console.log('analytics._integrations:', window.analytics._integrations);
+      
       const debugInfo = {
+        // Basic status
         analyticsInitialized: window.analytics.initialized,
         analyticsReady: analyticsReady,
         pluginsRegistered: pluginsRegistered,
-        loadedIntegrations: Object.keys(window.analytics._integrations || {}),
+        
+        // Settings and CDN configuration
+        settings: window.analytics.settings || null,
+        cdnSettings: window.analytics.settings?.cdnSettings || null,
+        configuredIntegrations: window.analytics.settings?.cdnSettings?.integrations || {},
+        
+        // Runtime integrations
+        _integrations: window.analytics._integrations || {},
+        analyticsInstance: window.analytics.Analytics?.instance || null,
+        instanceIntegrations: window.analytics.Analytics?.instance?.integrations || {},
+        
+        // Config
+        writeKey: window.analytics._writeKey || null,
+        
+        // Browser info
         userAgent: navigator.userAgent,
         currentUrl: window.location.href,
         timestamp: new Date().toISOString()
@@ -507,24 +608,88 @@
     }
     
     function showIntegrations() {
-      const integrations = window.analytics._integrations || {};
+      console.log('=== INTEGRATION DETECTION ===');
+      console.log('analytics.settings:', window.analytics.settings);
+      
+      // Check CDN settings for configured integrations
+      const cdnSettings = window.analytics.settings?.cdnSettings || {};
+      const configuredIntegrations = cdnSettings.integrations || {};
+      
+      // Check runtime loaded integrations
+      const integrationSources = {
+        'CDN Settings (Configured)': configuredIntegrations,
+        '_integrations (Runtime/Loaded)': window.analytics._integrations || {},
+        'Analytics.instance.integrations': window.analytics.Analytics?.instance?.integrations || {}
+      };
+      
+      console.log('Integration sources:', integrationSources);
+      
       const element = document.getElementById('debug-info');
+      let html = '<h4>🔍 Integration Detection Results:</h4>';
       
-      let html = '<h4>Loaded Destination Integrations:</h4>';
+      // Show configured vs loaded
+      const configuredCount = Object.keys(configuredIntegrations).length;
+      const loadedCount = Object.keys(window.analytics._integrations || {}).length;
       
-      if (Object.keys(integrations).length === 0) {
-        html += '<p>No destination integrations loaded. This might be because:</p>';
+      html += `<div class="status ${configuredCount > 0 ? 'success' : 'warning'}">`;
+      html += `<strong>📋 Configured Integrations:</strong> ${configuredCount}<br>`;
+      html += `<strong>🚀 Loaded SDK Integrations:</strong> ${loadedCount}`;
+      html += `</div>`;
+      
+      // Show each source
+      Object.entries(integrationSources).forEach(([source, integrations]) => {
+        const count = Object.keys(integrations).length;
+        html += `<h5>${source}: (${count})</h5>`;
+        
+        if (count > 0) {
+          html += '<ul>';
+          Object.entries(integrations).forEach(([name, integration]) => {
+            html += `<li><strong>${name}</strong>`;
+            
+            // For CDN settings, show if it's enabled
+            if (source.includes('CDN Settings') && typeof integration === 'object') {
+              const enabled = integration.enabled !== false;
+              html += ` - Enabled: ${enabled}`;
+              if (integration.bundlingStatus) html += ` - Status: ${integration.bundlingStatus}`;
+            }
+            
+            // For runtime integrations, show ready status
+            if (source.includes('Runtime') || source.includes('instance')) {
+              if (integration.ready !== undefined) html += ` - Ready: ${integration.ready}`;
+              if (integration.loaded !== undefined) html += ` - Loaded: ${integration.loaded}`;
+              if (integration.name) html += ` - Name: ${integration.name}`;
+            }
+            
+            html += '</li>';
+          });
+          html += '</ul>';
+        } else {
+          html += '<p><em>None found</em></p>';
+        }
+      });
+      
+      // Explanation section
+      if (configuredCount === 0) {
+        html += '<div class="status warning">';
+        html += '<h4>⚠️ No Integrations Configured</h4>';
+        html += '<p>No destinations found in <code>cdnSettings.integrations</code></p>';
+        html += '<p>This means no destinations are set up in your Segment workspace for this source.</p>';
+        html += '</div>';
+      } else if (loadedCount === 0) {
+        html += '<div class="status info">';
+        html += '<h4>📡 Integrations Configured but No SDKs Loaded</h4>';
+        html += '<p>This usually means:</p>';
         html += '<ul>';
-        html += '<li>No destinations are configured in your Segment workspace</li>';
-        html += '<li>All destinations are set to cloud-mode only</li>';
-        html += '<li>Destinations are still loading</li>';
+        html += '<li><strong>Cloud-mode destinations:</strong> Data sent server-side, no client SDK needed</li>';
+        html += '<li><strong>Device-mode destinations:</strong> SDKs should load but may be blocked</li>';
         html += '</ul>';
+        html += '<p>Check the Network tab to see if destination SDKs are being requested.</p>';
+        html += '</div>';
       } else {
-        html += '<ul>';
-        Object.entries(integrations).forEach(([name, integration]) => {
-          html += `<li><strong>${name}</strong> - Ready: ${integration.ready || 'Unknown'}</li>`;
-        });
-        html += '</ul>';
+        html += '<div class="status success">';
+        html += '<h4>✅ Integrations Working</h4>';
+        html += `<p>${configuredCount} configured destinations, ${loadedCount} client-side SDKs loaded!</p>`;
+        html += '</div>';
       }
       
       element.innerHTML = html;
@@ -534,6 +699,141 @@
     function openSegmentDebugger() {
       const writeKey = 'gmILwcgOaqputqVmLZKtD0eazHCAeNhR';
       window.open(`https://app.segment.com/sources/${writeKey}/debugger`, '_blank');
+    }
+    
+    function checkNetworkRequests() {
+      const element = document.getElementById('debug-info');
+      element.innerHTML = `
+        <h4>🌐 Network Request Check:</h4>
+        <ol>
+          <li>Open browser DevTools (F12)</li>
+          <li>Go to the <strong>Network</strong> tab</li>
+          <li>Filter by "JS" or search for destination names like:
+            <ul>
+              <li>"amplitude" - Amplitude SDK</li>
+              <li>"gtag" or "analytics" - Google Analytics</li>
+              <li>"connect.facebook" - Facebook Pixel</li>
+              <li>"mixpanel" - Mixpanel SDK</li>
+            </ul>
+          </li>
+          <li>Refresh the page and look for:</li>
+          <ul>
+            <li>✅ <strong>Success (200)</strong> - SDK loaded properly</li>
+            <li>❌ <strong>Failed/Blocked</strong> - Ad blocker or network issue</li>
+            <li>⚠️ <strong>404 Not Found</strong> - Destination not configured</li>
+          </ul>
+        </ol>
+        <p><strong>If you see failed requests:</strong> This explains why 0 SDKs are loaded!</p>
+      `;
+      element.style.display = 'block';
+    }
+    
+    function testSessionId() {
+      // Test the session ID plugin by showing current Amplitude session
+      try {
+        const amplitudeSessionId = localStorage.getItem('analytics_session_id');
+        
+        let sessionInfo = '';
+        if (amplitudeSessionId) {
+          sessionInfo = `
+            <div class="status success">
+              ✅ <strong>Amplitude Session ID Found:</strong><br>
+              <code>${amplitudeSessionId}</code>
+            </div>
+          `;
+        } else {
+          sessionInfo = `
+            <div class="status warning">
+              ⚠️ <strong>No Amplitude Session ID Found</strong><br>
+              This could mean:
+              <ul>
+                <li>Amplitude hasn't loaded yet</li>
+                <li>No Amplitude events have been sent yet</li>  
+                <li>Amplitude isn't configured in your Segment workspace</li>
+              </ul>
+            </div>
+          `;
+        }
+        
+        // Also check for other Amplitude keys that might exist
+        const otherAmplitudeKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.includes('amplitude') || key.includes('AMP_'))) {
+            otherAmplitudeKeys.push(key);
+          }
+        }
+        
+        let otherKeysInfo = '';
+        if (otherAmplitudeKeys.length > 0) {
+          otherKeysInfo = `
+            <h5>📋 Other Amplitude Keys Found:</h5>
+            <ul>
+              ${otherAmplitudeKeys.map(key => {
+                const value = localStorage.getItem(key);
+                return `<li><strong>${key}:</strong> ${value?.substring(0, 100)}${value?.length > 100 ? '...' : ''}</li>`;
+              }).join('')}
+            </ul>
+          `;
+        }
+        
+        const element = document.getElementById('debug-info');
+        element.innerHTML = `
+          <h4>🔐 Amplitude Session ID Status:</h4>
+          ${sessionInfo}
+          ${otherKeysInfo}
+          <p><strong>Note:</strong> The plugin will automatically add the Amplitude session ID to all events when available.</p>
+          <button onclick="sendTestEventWithSession()">Send Test Event</button>
+          <button onclick="refreshSessionCheck()">Refresh Check</button>
+        `;
+        element.style.display = 'block';
+        
+      } catch (error) {
+        console.error('Session ID test failed:', error);
+        updateStatus('debug-info', 'error', '❌ Error checking session ID: ' + error.message);
+      }
+    }
+    
+    function sendTestEventWithSession() {
+      // Send a test track event to see if session ID gets added
+      const sessionId = localStorage.getItem('analytics_session_id');
+      console.log('🧪 Sending test event. Amplitude session ID available:', sessionId);
+      
+      window.analytics.track('Test Session ID Event', {
+        testType: 'session_id_test',
+        amplitudeSessionAvailable: !!sessionId,
+        timestamp: new Date().toISOString()
+      });
+      
+      updateStatus('debug-info', 'success', '✅ Test event sent! Check Segment debugger to see if session ID was added.');
+    }
+    
+    function refreshSessionCheck() {
+      testSessionId();
+    }
+    
+    function clearSession() {
+      // Clear the Amplitude session ID (this will force Amplitude to create a new one)
+      localStorage.removeItem('analytics_session_id');
+      
+      // Also clear other common Amplitude keys
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('amplitude') || key.includes('AMP_'))) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log('🗑️ Cleared Amplitude key:', key);
+      });
+      
+      updateStatus('debug-info', 'success', '🔄 Amplitude session data cleared! Amplitude will create a new session on next event.');
+      
+      // Refresh the session check display
+      setTimeout(testSessionId, 500);
     }
     
     // Utility function to update status elements
