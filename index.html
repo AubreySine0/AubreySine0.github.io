@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Segment SDK Ready Test Site</title>
+  <title>Segment Analytics Ready Test Site</title>
   
   <!-- Your existing OneTrust setup -->
   <script
@@ -17,19 +17,42 @@
     function OptanonWrapper() {}
   </script>
 
-  <!-- Enhanced Segment Analytics setup with SDK loading control -->
+  <!-- Segment Analytics setup with controlled page call -->
   <script>
   !function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="gmILwcgOaqputqVmLZKtD0eazHCAeNhR";;analytics.SNIPPET_VERSION="5.2.0";
   
-  // DON'T CALL analytics.load() or analytics.page() here yet!
-  // We'll handle that in our SDK ready function
+  // Load analytics but DON'T call page() yet
+  analytics.load("gmILwcgOaqputqVmLZKtD0eazHCAeNhR");
+  
+  // Use analytics.ready() to ensure all SDKs are bundled before first page call
+  analytics.ready(function() {
+    console.log('🚀 Analytics.js and all destination SDKs are ready!');
+    console.log('📊 Loaded integrations:', Object.keys(analytics._integrations || {}));
+    
+    // Register plugins first
+    registerPlugins().then(function() {
+      console.log('🔌 Plugins registered successfully');
+      
+      // Now send the first page call - all SDKs are guaranteed to be loaded
+      analytics.page();
+      console.log('📄 First page call sent after all SDKs loaded');
+      
+      // Update UI to show ready status
+      updateReadyStatus();
+    }).catch(function(error) {
+      console.error('❌ Plugin registration failed:', error);
+      // Send page call anyway
+      analytics.page();
+      updateReadyStatus();
+    });
+  });
   }}();
   </script>
 
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      max-width: 1000px;
+      max-width: 800px;
       margin: 40px auto;
       padding: 20px;
       line-height: 1.6;
@@ -156,95 +179,37 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
-    .timeline {
-      margin-top: 15px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 4px;
-    }
-
-    .timeline-item {
-      padding: 5px 0;
-      border-left: 2px solid #dee2e6;
-      padding-left: 15px;
-      margin-bottom: 10px;
-    }
-
-    .timeline-item.completed {
-      border-left-color: #28a745;
-      color: #155724;
-    }
-
-    .timeline-item.loading {
-      border-left-color: #007cba;
-      color: #0c5460;
-    }
-
-    .timeline-item.failed {
-      border-left-color: #dc3545;
-      color: #721c24;
-    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🚀 Segment SDK Ready Test Site</h1>
-    <p class="subtitle">Enhanced SDK loading with guaranteed initialization before first page call</p>
+    <h1>🚀 Segment Analytics Ready Test</h1>
+    <p class="subtitle">Using analytics.ready() to ensure all SDKs load before the first page call</p>
     
-    <!-- SDK Loading Status Section -->
+    <!-- Ready Status Section -->
     <div class="section">
-      <h3>📊 SDK Loading Status</h3>
-      <div id="sdk-loading-status" class="status info">
+      <h3>📊 Analytics Ready Status</h3>
+      <div id="ready-status" class="status info">
         <div class="loading-indicator"></div>
-        Initializing SDKs...
+        Waiting for Analytics.js and all destination SDKs to load...
       </div>
-      <div id="loading-timeline" class="timeline" style="display: none;"></div>
-      <button onclick="retryInitialization()">Retry Initialization</button>
-      <button onclick="forcePageCall()">Force Page Call (for testing)</button>
-    </div>
-
-    <!-- SDK Management Section -->
-    <div class="section">
-      <h3>🔧 SDK Management</h3>
-      <p>Configure which SDKs to wait for before sending the first page call:</p>
-      
-      <div class="form-group">
-        <label><input type="checkbox" id="wait-amplitude" checked> Wait for Amplitude</label>
-      </div>
-      <div class="form-group">
-        <label><input type="checkbox" id="wait-ga4" checked> Wait for Google Analytics 4</label>
-      </div>
-      <div class="form-group">
-        <label><input type="checkbox" id="wait-facebook" checked> Wait for Facebook Pixel</label>
-      </div>
-      <div class="form-group">
-        <label><input type="checkbox" id="wait-mixpanel"> Wait for Mixpanel</label>
-      </div>
-      <div class="form-group">
-        <label><input type="checkbox" id="wait-intercom"> Wait for Intercom</label>
-      </div>
-      
-      <div class="form-group">
-        <label>Timeout (seconds): <input type="number" id="sdk-timeout" value="10" min="5" max="60" style="width: 80px;"></label>
-      </div>
-      
-      <button onclick="updateSDKConfig()">Update Configuration</button>
+      <button onclick="checkReadyStatus()">Check Status</button>
+      <button onclick="sendManualPageCall()">Send Manual Page Call</button>
     </div>
 
     <!-- Plugin Status Section -->
     <div class="section">
-      <h3>Plugin Status</h3>
+      <h3>🔌 Plugin Status</h3>
       <div id="plugin-status" class="status info">
-        Waiting for SDKs to initialize...
+        Waiting for plugins to register...
       </div>
-      <button onclick="checkPluginStatus()">Refresh Status</button>
+      <button onclick="checkPluginStatus()">Check Plugins</button>
     </div>
 
     <!-- Event Testing Section -->
     <div class="section">
       <h3>📊 Send Test Events</h3>
-      <p>Send events after SDK initialization:</p>
+      <p>All events sent after analytics.ready() fires:</p>
       
       <div class="form-group">
         <input type="text" id="track-event" placeholder="Event name" value="Button Clicked">
@@ -269,7 +234,7 @@
     <div class="section">
       <h3>🔧 Debug Information</h3>
       <button onclick="showDebugInfo()">Show Debug Info</button>
-      <button onclick="showSDKStatus()">Show SDK Status</button>
+      <button onclick="showIntegrations()">Show Loaded Integrations</button>
       <button onclick="openSegmentDebugger()">Open Segment Debugger</button>
       
       <div id="debug-info" class="debug-info" style="display: none;"></div>
@@ -277,296 +242,9 @@
   </div>
 
   <script>
-    // Enhanced Analytics Ready Function with SDK Loading Management
-    class SegmentSDKManager {
-      constructor(config = {}) {
-        this.config = {
-          timeout: config.timeout || 10000, // 10 seconds default
-          debug: config.debug !== false, // Default to true
-          requiredSDKs: config.requiredSDKs || [
-            'Amplitude (Actions)',
-            'Google Analytics 4 (Actions)', 
-            'Facebook Pixel (Actions)'
-          ],
-          retryAttempts: config.retryAttempts || 3,
-          retryDelay: config.retryDelay || 2000,
-          ...config
-        };
-        
-        this.sdkStatus = new Map();
-        this.initializationPromise = null;
-        this.isInitialized = false;
-        this.firstPageCallMade = false;
-        this.startTime = Date.now();
-        this.timeline = [];
-        
-        this.log('SDK Manager initialized', this.config);
-        this.addTimelineEvent('SDK Manager initialized', 'completed');
-      }
-      
-      log(message, data) {
-        if (this.config.debug) {
-          console.log(`[Segment SDK Manager] ${message}`, data || '');
-        }
-      }
-      
-      addTimelineEvent(message, status = 'loading') {
-        const event = {
-          timestamp: Date.now(),
-          message,
-          status,
-          elapsed: Date.now() - this.startTime
-        };
-        this.timeline.push(event);
-        this.updateTimelineUI();
-        this.log(`Timeline: ${message} (${status})`);
-      }
-      
-      updateTimelineUI() {
-        const timelineEl = document.getElementById('loading-timeline');
-        if (!timelineEl) return;
-        
-        timelineEl.style.display = 'block';
-        timelineEl.innerHTML = this.timeline.map(event => 
-          `<div class="timeline-item ${event.status}">
-            <strong>${event.elapsed}ms:</strong> ${event.message}
-          </div>`
-        ).join('');
-      }
-      
-      updateLoadingStatus(message, type = 'info') {
-        const statusEl = document.getElementById('sdk-loading-status');
-        if (statusEl) {
-          const indicator = type === 'info' ? '<div class="loading-indicator"></div>' : '';
-          statusEl.className = `status ${type}`;
-          statusEl.innerHTML = `${indicator}${message}`;
-        }
-      }
-      
-      // Check if a specific SDK is loaded
-      isSDKLoaded(sdkName) {
-        if (!window.analytics?.Analytics?.instance) return false;
-        
-        const instance = window.analytics.Analytics.instance;
-        if (!instance.integrations) return false;
-        
-        // Check if the integration is loaded and ready
-        const integration = Object.values(instance.integrations).find(int => 
-          int.name === sdkName || 
-          int.options?.name === sdkName ||
-          (int.constructor && int.constructor.name.includes(sdkName.replace(/\s+/g, '')))
-        );
-        
-        if (!integration) return false;
-        
-        // Check if integration is ready (different SDKs have different ready indicators)
-        if (typeof integration.ready === 'function') {
-          return integration.ready();
-        } else if (typeof integration.loaded === 'function') {
-          return integration.loaded();
-        } else if (integration._ready !== undefined) {
-          return integration._ready;
-        } else if (integration.initialized !== undefined) {
-          return integration.initialized;
-        }
-        
-        // If no specific ready check, assume it's ready if it exists
-        return true;
-      }
-      
-      // Get all loaded SDK names
-      getLoadedSDKs() {
-        if (!window.analytics?.Analytics?.instance?.integrations) return [];
-        
-        return Object.values(window.analytics.Analytics.instance.integrations)
-          .map(int => int.name || int.options?.name || int.constructor?.name || 'Unknown')
-          .filter(name => name !== 'Unknown');
-      }
-      
-      // Check if all required SDKs are loaded
-      checkAllSDKsLoaded() {
-        const loadedSDKs = this.getLoadedSDKs();
-        const requiredSDKs = this.config.requiredSDKs;
-        
-        this.log('Checking SDKs', { required: requiredSDKs, loaded: loadedSDKs });
-        
-        for (const sdkName of requiredSDKs) {
-          const isLoaded = this.isSDKLoaded(sdkName);
-          this.sdkStatus.set(sdkName, isLoaded);
-          
-          if (!isLoaded) {
-            this.log(`SDK not ready: ${sdkName}`);
-            return false;
-          }
-        }
-        
-        this.log('All required SDKs are loaded!', { loadedSDKs });
-        return true;
-      }
-      
-      // Wait for all SDKs to load
-      async waitForSDKs() {
-        return new Promise((resolve, reject) => {
-          const startTime = Date.now();
-          const checkInterval = 100; // Check every 100ms
-          let attempts = 0;
-          const maxAttempts = this.config.timeout / checkInterval;
-          
-          const checker = setInterval(() => {
-            attempts++;
-            const elapsed = Date.now() - startTime;
-            
-            if (this.checkAllSDKsLoaded()) {
-              clearInterval(checker);
-              this.addTimelineEvent(`All SDKs loaded successfully (${attempts} checks)`, 'completed');
-              resolve();
-            } else if (elapsed >= this.config.timeout) {
-              clearInterval(checker);
-              const loadedSDKs = this.getLoadedSDKs();
-              const missingSDKs = this.config.requiredSDKs.filter(sdk => !this.isSDKLoaded(sdk));
-              
-              this.addTimelineEvent(`Timeout waiting for SDKs: ${missingSDKs.join(', ')}`, 'failed');
-              reject(new Error(`Timeout waiting for SDKs: ${missingSDKs.join(', ')}. Loaded: ${loadedSDKs.join(', ')}`));
-            } else {
-              // Update status periodically
-              if (attempts % 10 === 0) {
-                const loadedCount = this.config.requiredSDKs.filter(sdk => this.isSDKLoaded(sdk)).length;
-                this.updateLoadingStatus(
-                  `Loading SDKs... (${loadedCount}/${this.config.requiredSDKs.length}) - ${elapsed}ms elapsed`
-                );
-              }
-            }
-          }, checkInterval);
-        });
-      }
-      
-      // Initialize Segment with SDK waiting
-      async initialize() {
-        if (this.initializationPromise) {
-          return this.initializationPromise;
-        }
-        
-        this.initializationPromise = this._doInitialization();
-        return this.initializationPromise;
-      }
-      
-      async _doInitialization() {
-        try {
-          this.addTimelineEvent('Starting Segment Analytics load');
-          this.updateLoadingStatus('Loading Segment Analytics...');
-          
-          // Load Segment Analytics
-          window.analytics.load(window.analytics._writeKey);
-          
-          // Wait for analytics to be ready
-          await new Promise((resolve) => {
-            window.analytics.ready(resolve);
-          });
-          
-          this.addTimelineEvent('Segment Analytics loaded', 'completed');
-          this.updateLoadingStatus('Segment loaded, waiting for destination SDKs...');
-          
-          // Wait for all required SDKs
-          await this.waitForSDKs();
-          
-          // Register any plugins
-          await this.registerPlugins();
-          
-          // Mark as initialized
-          this.isInitialized = true;
-          this.addTimelineEvent('All systems ready!', 'completed');
-          this.updateLoadingStatus('✅ All SDKs loaded and ready!', 'success');
-          
-          // Send the first page call
-          await this.sendFirstPageCall();
-          
-          return true;
-          
-        } catch (error) {
-          this.addTimelineEvent(`Initialization failed: ${error.message}`, 'failed');
-          this.updateLoadingStatus(`❌ Initialization failed: ${error.message}`, 'error');
-          this.log('Initialization failed', error);
-          throw error;
-        }
-      }
-      
-      async registerPlugins() {
-        try {
-          this.addTimelineEvent('Registering plugins');
-          
-          // Register UTM Plugin
-          if (window.utmCampaignPersistencePlugin) {
-            await window.analytics.register(window.utmCampaignPersistencePlugin());
-            this.addTimelineEvent('UTM Plugin registered', 'completed');
-          }
-          
-          // Register Geo Plugin  
-          if (window.geoLocationPlugin) {
-            const geoPlugin = window.geoLocationPlugin({ 
-              debug: this.config.debug,
-              autoRequestPermission: false
-            });
-            await window.analytics.register(geoPlugin);
-            this.addTimelineEvent('Geo Plugin registered', 'completed');
-          }
-          
-        } catch (error) {
-          this.addTimelineEvent(`Plugin registration failed: ${error.message}`, 'failed');
-          this.log('Plugin registration failed', error);
-          // Don't throw - plugins are optional
-        }
-      }
-      
-      async sendFirstPageCall() {
-        if (this.firstPageCallMade) return;
-        
-        try {
-          this.addTimelineEvent('Sending first page call');
-          
-          // Send the page call
-          window.analytics.page();
-          
-          this.firstPageCallMade = true;
-          this.addTimelineEvent('First page call sent successfully', 'completed');
-          
-        } catch (error) {
-          this.addTimelineEvent(`First page call failed: ${error.message}`, 'failed');
-          this.log('First page call failed', error);
-          throw error;
-        }
-      }
-      
-      // Public method to get initialization status
-      getStatus() {
-        return {
-          isInitialized: this.isInitialized,
-          firstPageCallMade: this.firstPageCallMade,
-          sdkStatus: Object.fromEntries(this.sdkStatus),
-          loadedSDKs: this.getLoadedSDKs(),
-          requiredSDKs: this.config.requiredSDKs,
-          timeline: this.timeline
-        };
-      }
-      
-      // Update configuration
-      updateConfig(newConfig) {
-        this.config = { ...this.config, ...newConfig };
-        this.log('Configuration updated', this.config);
-      }
-      
-      // Retry initialization
-      async retry() {
-        this.initializationPromise = null;
-        this.isInitialized = false;
-        this.firstPageCallMade = false;
-        this.sdkStatus.clear();
-        this.timeline = [];
-        this.startTime = Date.now();
-        
-        this.addTimelineEvent('Retrying initialization', 'loading');
-        return this.initialize();
-      }
-    }
+    // Simple state tracking
+    let analyticsReady = false;
+    let pluginsRegistered = false;
     
     // Plugin definitions (same as before)
     window.utmCampaignPersistencePlugin = () => {
@@ -616,10 +294,12 @@
           const currentCampaignSource = ctx.event.context?.campaign?.source;
           
           if (currentCampaignSource) {
+            console.log(`UTM Plugin: Found campaign source: ${currentCampaignSource}`);
             setLocalStorageWithExpiry(STORAGE_KEY, currentCampaignSource, EXPIRY_DAYS);
           } else {
             const storedCampaignSource = getLocalStorageWithExpiry(STORAGE_KEY);
             if (storedCampaignSource) {
+              console.log(`UTM Plugin: Adding stored campaign source: ${storedCampaignSource}`);
               ctx.updateEvent('context.campaign.source', storedCampaignSource);
             }
           }
@@ -628,6 +308,14 @@
         },
         
         track: (ctx) => {
+          const storedCampaignSource = getLocalStorageWithExpiry(STORAGE_KEY);
+          if (storedCampaignSource && !ctx.event.context?.campaign?.source) {
+            ctx.updateEvent('context.campaign.source', storedCampaignSource);
+          }
+          return ctx;
+        },
+        
+        identify: (ctx) => {
           const storedCampaignSource = getLocalStorageWithExpiry(STORAGE_KEY);
           if (storedCampaignSource && !ctx.event.context?.campaign?.source) {
             ctx.updateEvent('context.campaign.source', storedCampaignSource);
@@ -699,99 +387,77 @@
       };
     };
     
-    // Initialize the SDK Manager
-    let sdkManager = null;
-    
-    // Function to get SDK configuration from UI
-    function getSDKConfigFromUI() {
-      const requiredSDKs = [];
-      
-      if (document.getElementById('wait-amplitude')?.checked) {
-        requiredSDKs.push('Amplitude (Actions)');
+    // Register plugins function (called from analytics.ready)
+    async function registerPlugins() {
+      try {
+        // Register UTM Plugin
+        await window.analytics.register(window.utmCampaignPersistencePlugin());
+        console.log('✅ UTM Campaign Plugin registered');
+        
+        // Register Geo Plugin
+        await window.analytics.register(window.geoLocationPlugin({ 
+          debug: true,
+          autoRequestPermission: true
+        }));
+        console.log('✅ Geo Location Plugin registered');
+        
+        pluginsRegistered = true;
+        return true;
+        
+      } catch (error) {
+        console.error('❌ Plugin registration failed:', error);
+        throw error;
       }
-      if (document.getElementById('wait-ga4')?.checked) {
-        requiredSDKs.push('Google Analytics 4 (Actions)');
-      }
-      if (document.getElementById('wait-facebook')?.checked) {
-        requiredSDKs.push('Facebook Pixel (Actions)');
-      }
-      if (document.getElementById('wait-mixpanel')?.checked) {
-        requiredSDKs.push('Mixpanel');
-      }
-      if (document.getElementById('wait-intercom')?.checked) {
-        requiredSDKs.push('Intercom');
-      }
-      
-      const timeout = (parseInt(document.getElementById('sdk-timeout')?.value) || 10) * 1000;
-      
-      return { requiredSDKs, timeout };
     }
     
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', async () => {
-      const config = getSDKConfigFromUI();
-      sdkManager = new SegmentSDKManager(config);
+    // Update ready status in UI
+    function updateReadyStatus() {
+      analyticsReady = true;
+      const statusEl = document.getElementById('ready-status');
+      const integrations = Object.keys(window.analytics._integrations || {});
       
-      try {
-        await sdkManager.initialize();
-      } catch (error) {
-        console.error('SDK initialization failed:', error);
-      }
-    });
+      statusEl.className = 'status success';
+      statusEl.innerHTML = `✅ Analytics ready! Loaded ${integrations.length} destination SDKs: ${integrations.join(', ') || 'none'}`;
+    }
     
     // UI Event Handlers
-    function updateSDKConfig() {
-      if (sdkManager) {
-        const newConfig = getSDKConfigFromUI();
-        sdkManager.updateConfig(newConfig);
-        updateStatus('sdk-loading-status', 'info', '✅ Configuration updated');
-      }
-    }
-    
-    async function retryInitialization() {
-      if (sdkManager) {
-        try {
-          const config = getSDKConfigFromUI();
-          sdkManager.updateConfig(config);
-          await sdkManager.retry();
-        } catch (error) {
-          console.error('Retry failed:', error);
-        }
-      }
-    }
-    
-    function forcePageCall() {
-      if (window.analytics) {
-        window.analytics.page('Manual Page Call', {
-          manual: true,
-          timestamp: new Date().toISOString()
-        });
-        updateStatus('sdk-loading-status', 'success', '📄 Manual page call sent');
+    function checkReadyStatus() {
+      const statusEl = document.getElementById('ready-status');
+      
+      if (window.analytics.initialized) {
+        const integrations = Object.keys(window.analytics._integrations || {});
+        statusEl.className = 'status success';
+        statusEl.innerHTML = `✅ Analytics initialized with ${integrations.length} integrations: ${integrations.join(', ') || 'none'}`;
+      } else {
+        statusEl.className = 'status warning';
+        statusEl.innerHTML = '⏳ Still loading...';
       }
     }
     
     function checkPluginStatus() {
-      if (sdkManager) {
-        const status = sdkManager.getStatus();
-        const statusEl = document.getElementById('plugin-status');
-        
-        if (status.isInitialized) {
-          statusEl.className = 'status success';
-          statusEl.innerHTML = `✅ All systems ready! Loaded SDKs: ${status.loadedSDKs.join(', ')}`;
-        } else {
-          statusEl.className = 'status warning';
-          statusEl.innerHTML = `⏳ Still initializing... Loaded: ${status.loadedSDKs.length}/${status.requiredSDKs.length} SDKs`;
-        }
+      const statusEl = document.getElementById('plugin-status');
+      
+      if (pluginsRegistered) {
+        statusEl.className = 'status success';
+        statusEl.innerHTML = '✅ All plugins registered successfully';
+      } else if (analyticsReady) {
+        statusEl.className = 'status warning';
+        statusEl.innerHTML = '⏳ Analytics ready, plugins registering...';
+      } else {
+        statusEl.className = 'status info';
+        statusEl.innerHTML = '⏳ Waiting for analytics to be ready...';
       }
     }
     
-    // Event sending functions (same as before)
+    function sendManualPageCall() {
+      window.analytics.page('Manual Page Call', {
+        manual: true,
+        timestamp: new Date().toISOString()
+      });
+      updateStatus('ready-status', 'success', '📄 Manual page call sent');
+    }
+    
     function sendTrackEvent() {
-      if (!sdkManager?.isInitialized) {
-        updateStatus('event-status', 'warning', '⚠️ SDKs not ready yet');
-        return;
-      }
-      
       const eventName = document.getElementById('track-event').value || 'Button Clicked';
       window.analytics.track(eventName, {
         buttonId: 'test-button',
@@ -802,11 +468,6 @@
     }
     
     function sendIdentifyEvent() {
-      if (!sdkManager?.isInitialized) {
-        updateStatus('event-status', 'warning', '⚠️ SDKs not ready yet');
-        return;
-      }
-      
       const userId = document.getElementById('user-id').value || 'test-user-123';
       const email = document.getElementById('user-email').value || 'test@example.com';
       
@@ -820,11 +481,6 @@
     }
     
     function sendPageEvent() {
-      if (!sdkManager?.isInitialized) {
-        updateStatus('event-status', 'warning', '⚠️ SDKs not ready yet');
-        return;
-      }
-      
       const pageName = document.getElementById('page-name').value || 'Test Page';
       window.analytics.page(pageName, {
         title: pageName,
@@ -835,46 +491,44 @@
     }
     
     function showDebugInfo() {
-      if (sdkManager) {
-        const status = sdkManager.getStatus();
-        const debugInfo = {
-          sdkManagerStatus: status,
-          analyticsInitialized: window.analytics?.initialized || false,
-          analyticsInstance: !!window.analytics?.Analytics?.instance,
-          loadedIntegrations: window.analytics?.Analytics?.instance ? 
-            Object.keys(window.analytics.Analytics.instance.integrations || {}) : [],
-          userAgent: navigator.userAgent,
-          currentUrl: window.location.href,
-          timestamp: new Date().toISOString()
-        };
-        
-        const element = document.getElementById('debug-info');
-        element.innerHTML = '<pre>' + JSON.stringify(debugInfo, null, 2) + '</pre>';
-        element.style.display = 'block';
-      }
+      const debugInfo = {
+        analyticsInitialized: window.analytics.initialized,
+        analyticsReady: analyticsReady,
+        pluginsRegistered: pluginsRegistered,
+        loadedIntegrations: Object.keys(window.analytics._integrations || {}),
+        userAgent: navigator.userAgent,
+        currentUrl: window.location.href,
+        timestamp: new Date().toISOString()
+      };
+      
+      const element = document.getElementById('debug-info');
+      element.innerHTML = '<pre>' + JSON.stringify(debugInfo, null, 2) + '</pre>';
+      element.style.display = 'block';
     }
     
-    function showSDKStatus() {
-      if (sdkManager) {
-        const status = sdkManager.getStatus();
-        const element = document.getElementById('debug-info');
-        
-        let html = '<h4>SDK Loading Timeline:</h4>';
-        html += '<div class="timeline">';
-        
-        status.timeline.forEach(event => {
-          html += `<div class="timeline-item ${event.status}">
-            <strong>${event.elapsed}ms:</strong> ${event.message}
-          </div>`;
+    function showIntegrations() {
+      const integrations = window.analytics._integrations || {};
+      const element = document.getElementById('debug-info');
+      
+      let html = '<h4>Loaded Destination Integrations:</h4>';
+      
+      if (Object.keys(integrations).length === 0) {
+        html += '<p>No destination integrations loaded. This might be because:</p>';
+        html += '<ul>';
+        html += '<li>No destinations are configured in your Segment workspace</li>';
+        html += '<li>All destinations are set to cloud-mode only</li>';
+        html += '<li>Destinations are still loading</li>';
+        html += '</ul>';
+      } else {
+        html += '<ul>';
+        Object.entries(integrations).forEach(([name, integration]) => {
+          html += `<li><strong>${name}</strong> - Ready: ${integration.ready || 'Unknown'}</li>`;
         });
-        
-        html += '</div>';
-        html += '<h4>SDK Status Details:</h4>';
-        html += `<pre>${JSON.stringify(status.sdkStatus, null, 2)}</pre>`;
-        
-        element.innerHTML = html;
-        element.style.display = 'block';
+        html += '</ul>';
       }
+      
+      element.innerHTML = html;
+      element.style.display = 'block';
     }
     
     function openSegmentDebugger() {
@@ -898,13 +552,6 @@
         }
       }
     }
-    
-    // Auto-check status periodically
-    setInterval(() => {
-      if (sdkManager && !sdkManager.isInitialized) {
-        checkPluginStatus();
-      }
-    }, 2000);
   </script>
 </body>
 </html>
