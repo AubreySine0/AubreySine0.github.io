@@ -293,26 +293,19 @@
       };
     };
 
-    // Lightweight Session Recording Controller - 5% sample rate
+    // Lightweight Session Recording Controller - Demo mode (100% sampling)
     window.sessionRecordingController = () => {
-      const SAMPLE_RATE = 0.05; // 5% sampling
+      const SAMPLE_RATE = 1.0; // 100% for demo purposes
       let isRecording = false;
       let recordingStartTime = null;
       
       const shouldRecord = () => {
-        // Check if this session should be recorded (5% chance)
-        const stored = sessionStorage.getItem('segment_recording_sampled');
-        if (stored !== null) {
-          return stored === 'true';
-        }
-        
-        const sampled = Math.random() < SAMPLE_RATE;
-        sessionStorage.setItem('segment_recording_sampled', sampled.toString());
-        return sampled;
+        // For demo: always record
+        return true;
       };
       
       const startRecording = () => {
-        if (isRecording || !shouldRecord()) return false;
+        if (isRecording) return false;
         
         try {
           if (!window.amplitude?.sessionReplay) return false;
@@ -320,7 +313,7 @@
           window.amplitude.sessionReplay.start();
           isRecording = true;
           recordingStartTime = Date.now();
-          console.log('Session recording started (5% sample)');
+          console.log('Session recording started (demo mode - 100% sample)');
           return true;
         } catch (error) {
           return false;
@@ -357,7 +350,7 @@
         isLoaded: () => true,
         
         load: () => {
-          // Auto-start recording if sampled
+          // Auto-start recording for demo
           setTimeout(() => {
             startRecording();
           }, 1000);
