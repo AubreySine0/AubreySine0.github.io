@@ -42,6 +42,24 @@
   <!-- Load Amplitude SDK and Session Replay Plugin -->
   <script src="https://cdn.amplitude.com/libs/analytics-browser-2.4.0-min.js.gz"></script>
   <script src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1.6.11-min.js.gz"></script>
+  
+  <script>
+    // Wait for Amplitude to be available before proceeding
+    window.waitForAmplitude = function() {
+      return new Promise((resolve) => {
+        const checkAmplitude = () => {
+          if (window.amplitude && window.amplitudeSessionReplay) {
+            console.log('Amplitude SDK and Session Replay plugin loaded');
+            resolve();
+          } else {
+            console.log('Waiting for Amplitude...');
+            setTimeout(checkAmplitude, 100);
+          }
+        };
+        checkAmplitude();
+      });
+    };
+  </script>
   </script>
 
   <style>
@@ -310,7 +328,7 @@
           console.log('Initializing Amplitude with Session Replay...');
           
           // Initialize Amplitude - replace with your actual API key
-          await window.amplitude.init('YOUR_AMPLITUDE_API_KEY', {
+          await window.amplitude.init('8503d81bcbaf0a80b34a790aa0235e95', {
             defaultTracking: {
               sessions: true,
               pageViews: false, // Segment handles page views
