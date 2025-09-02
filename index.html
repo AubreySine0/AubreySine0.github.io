@@ -39,6 +39,11 @@
   }}();
   </script>
 
+  <!-- Load Amplitude SDK and Session Replay Plugin -->
+  <script src="https://cdn.amplitude.com/libs/analytics-browser-2.4.0-min.js.gz"></script>
+  <script src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1.6.11-min.js.gz"></script>
+  </script>
+
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -131,7 +136,7 @@
 <body>
   <div class="container">
     <h1>Segment Analytics - Production Ready v37</h1>
-    <p class="subtitle">Optimized configuration: UTM + Session ID plugins for attribution tracking</p>
+    <p class="subtitle">Optimized configuration: UTM + Session ID plugins + Amplitude Session Replay</p>
     
     <!-- Status Section -->
     <div class="section">
@@ -175,6 +180,18 @@
       </div>
       
       <div id="utm-status" class="status" style="display: none;"></div>
+    </div>
+
+    <!-- Session Recording Controls -->
+    <div class="section">
+      <h3>Amplitude Session Replay</h3>
+      <p>Real Amplitude Session Replay integration with manual controls</p>
+      <div class="form-group">
+        <button onclick="startRecording()">Start Recording</button>
+        <button onclick="stopRecording()">Stop Recording</button>
+        <button onclick="checkRecordingStatus()">Check Status</button>
+      </div>
+      <div id="recording-status" class="status" style="display: none;"></div>
     </div>
   </div>
 
@@ -282,6 +299,118 @@
       };
     };
 
+    // Amplitude Session Replay Controller
+    window.sessionRecordingController = () => {
+      let isRecording = false;
+      let recordingStartTime = null;
+      let sessionReplayPlugin = null;
+      
+      const initializeAmplitude = async () => {
+        try {
+          console.log('Initializing Amplitude with Session Replay...');
+          
+          // Initialize Amplitude - replace with your actual API key
+          await window.amplitude.init('YOUR_AMPLITUDE_API_KEY', {
+            defaultTracking: {
+              sessions: true,
+              pageViews: false, // Segment handles page views
+              formInteractions: true,
+              fileDownloads: true
+            }
+          });
+
+          // Create and add Session Replay plugin
+          sessionReplayPlugin = new window.amplitudeSessionReplay.sessionReplayPlugin({
+            sampleRate: 1, // 100% for demo
+            masking: {
+              maskAllInputs: false,
+              maskAllText: false
+            }
+          });
+
+          await window.amplitude.add(sessionReplayPlugin);
+          console.log('Amplitude Session Replay initialized successfully');
+          return true;
+        } catch (error) {
+          console.error('Failed to initialize Amplitude:', error);
+          return false;
+        }
+      };
+      
+      const startRecording = () => {
+        console.log('=== Starting Amplitude Session Recording ===');
+        
+        if (!sessionReplayPlugin) {
+          console.error('Session replay plugin not initialized');
+          return false;
+        }
+        
+        if (isRecording) {
+          console.log('Recording already active');
+          return false;
+        }
+        
+        try {
+          sessionReplayPlugin.startRecording();
+          isRecording = true;
+          recordingStartTime = Date.now();
+          
+          // Track to Segment Analytics
+          if (window.analytics) {
+            window.analytics.track('Amplitude Session Recording Started', {
+              timestamp: new Date().toISOString()
+            });
+          }
+          
+          console.log('Amplitude session recording started successfully');
+          return true;
+        } catch (error) {
+          console.error('Error starting recording:', error);
+          return false;
+        }
+      };
+      
+      const stopRecording = () => {
+        if (!isRecording || !sessionReplayPlugin) {
+          console.log('No active recording to stop');
+          return false;
+        }
+        
+        try {
+          sessionReplayPlugin.stopRecording();
+          const duration = Date.now() - recordingStartTime;
+          isRecording = false;
+          recordingStartTime = null;
+          
+          // Track to Segment Analytics
+          if (window.analytics) {
+            window.analytics.track('Amplitude Session Recording Stopped', {
+              recordingDuration: duration,
+              timestamp: new Date().toISOString()
+            });
+          }
+          
+          console.log('Amplitude session recording stopped successfully');
+          return true;
+        } catch (error) {
+          console.error('Error stopping recording:', error);
+          return false;
+        }
+      };
+      
+      return {
+        name: 'Amplitude Session Replay Controller',
+        type: 'utility',
+        version: '1.0.0',
+        isLoaded: () => !!sessionReplayPlugin,
+        load: initializeAmplitude,
+        startRecording: startRecording,
+        stopRecording: stopRecording,
+        isRecording: () => isRecording,
+        getPlugin: () => sessionReplayPlugin
+      };
+    };
+
     // Register production plugins
     async function registerProductionPlugins() {
       try {
@@ -290,6 +419,11 @@
         
         // Session ID Plugin
         await window.analytics.register(window.sessionIdPlugin());
+        
+        // Session Recording Controller
+        window.recordingController = window.sessionRecordingController();
+        await window.recordingController.load(); // Initialize Amplitude
+        await window.analytics.register(window.recordingController);
         
         updateAnalyticsStatus();
         return true;
@@ -306,7 +440,7 @@
       const configuredCount = Object.keys(integrations).length;
       
       statusEl.className = 'status success';
-      statusEl.innerHTML = `Analytics ready with ${configuredCount} destinations. Production plugins loaded: UTM Campaign Persistence, Session ID tracking`;
+      statusEl.innerHTML = `Analytics ready with ${configuredCount} destinations. Production plugins loaded: UTM Campaign Persistence, Session ID tracking, Amplitude Session Replay`;
     }
     
     function sendTrackEvent() {
@@ -437,6 +571,60 @@
     function clearUTMStorage() {
       localStorage.removeItem('segment_utm_campaign_source');
       updateStatus('utm-status', 'success', 'UTM storage cleared - next UTM visit will create new tracking');
+    }
+    
+    function startRecording() {
+      console.log('=== UI: Start Recording button clicked ===');
+      
+      if (window.recordingController && window.recordingController.startRecording) {
+        const started = window.recordingController.startRecording();
+        console.log('Recording start result:', started);
+        
+        const message = started 
+          ? 'Amplitude session recording started successfully' 
+          : 'Recording failed to start (check console for details)';
+        
+        updateStatus('recording-status', started ? 'success' : 'info', message);
+      } else {
+        console.error('Recording controller not available');
+        updateStatus('recording-status', 'info', 'Recording controller not available');
+      }
+    }
+    
+    function stopRecording() {
+      if (window.recordingController && window.recordingController.stopRecording) {
+        const stopped = window.recordingController.stopRecording();
+        const message = stopped 
+          ? 'Amplitude session recording stopped successfully' 
+          : 'No active recording to stop';
+          
+        updateStatus('recording-status', stopped ? 'success' : 'info', message);
+      }
+    }
+    
+    function checkRecordingStatus() {
+      console.log('=== DEBUG: Checking recording status ===');
+      
+      if (window.recordingController) {
+        const isRecording = window.recordingController.isRecording();
+        const isLoaded = window.recordingController.isLoaded();
+        const plugin = window.recordingController.getPlugin();
+        
+        console.log('Plugin loaded:', isLoaded);
+        console.log('Is recording:', isRecording);
+        console.log('Plugin object:', plugin);
+        
+        const status = isRecording 
+          ? 'Amplitude Recording ACTIVE' 
+          : isLoaded
+            ? 'Amplitude Recording READY (not active)'
+            : 'Amplitude Recording NOT LOADED';
+            
+        updateStatus('recording-status', 'info', status);
+      } else {
+        console.error('Recording controller not found');
+        updateStatus('recording-status', 'info', 'Recording controller not found');
+      }
     }
     
     function updateStatus(elementId, type, message) {
