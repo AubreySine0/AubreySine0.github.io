@@ -39,27 +39,8 @@
   }}();
   </script>
 
-  <!-- Load Amplitude SDK and Session Replay Plugin -->
-  <script src="https://cdn.amplitude.com/libs/analytics-browser-2.4.0-min.js.gz"></script>
+  <!-- Load only the Session Replay Plugin (Amplitude SDK comes from Segment) -->
   <script src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1.6.11-min.js.gz"></script>
-  
-  <script>
-    // Wait for Amplitude to be available before proceeding
-    window.waitForAmplitude = function() {
-      return new Promise((resolve) => {
-        const checkAmplitude = () => {
-          if (window.amplitude && window.amplitudeSessionReplay) {
-            console.log('Amplitude SDK and Session Replay plugin loaded');
-            resolve();
-          } else {
-            console.log('Waiting for Amplitude...');
-            setTimeout(checkAmplitude, 100);
-          }
-        };
-        checkAmplitude();
-      });
-    };
-  </script>
   </script>
 
   <style>
@@ -317,27 +298,35 @@
       };
     };
 
-    // Amplitude Session Replay Controller
+    // Amplitude Session Replay Controller (works with Segment's Amplitude integration)
     window.sessionRecordingController = () => {
       let isRecording = false;
       let recordingStartTime = null;
       let sessionReplayPlugin = null;
       
-      const initializeAmplitude = async () => {
+      const initializeSessionReplay = async () => {
         try {
-          console.log('Initializing Amplitude with Session Replay...');
+          console.log('=== Adding Session Replay to Segment-initialized Amplitude ===');
           
-          // Initialize Amplitude - replace with your actual API key
-          await window.amplitude.init('8503d81bcbaf0a80b34a790aa0235e95', {
-            defaultTracking: {
-              sessions: true,
-              pageViews: false, // Segment handles page views
-              formInteractions: true,
-              fileDownloads: true
-            }
+          // Wait for Segment to load Amplitude
+          await new Promise((resolve) => {
+            const checkAmplitude = () => {
+              if (window.amplitude && window.amplitudeSessionReplay) {
+                console.log('Amplitude (from Segment) and Session Replay plugin available');
+                resolve();
+              } else {
+                console.log('Waiting for Amplitude from Segment and Session Replay plugin...');
+                console.log('window.amplitude:', !!window.amplitude);
+                console.log('window.amplitudeSessionReplay:', !!window.amplitudeSessionReplay);
+                setTimeout(checkAmplitude, 500);
+              }
+            };
+            checkAmplitude();
           });
 
-          // Create and add Session Replay plugin
+          console.log('Creating session replay plugin...');
+          
+          // Create Session Replay plugin
           sessionReplayPlugin = new window.amplitudeSessionReplay.sessionReplayPlugin({
             sampleRate: 1, // 100% for demo
             masking: {
@@ -346,11 +335,14 @@
             }
           });
 
+          console.log('Adding session replay plugin to existing Amplitude instance...');
           await window.amplitude.add(sessionReplayPlugin);
-          console.log('Amplitude Session Replay initialized successfully');
+          
+          console.log('Session Replay plugin added successfully to Segment-managed Amplitude');
           return true;
         } catch (error) {
-          console.error('Failed to initialize Amplitude:', error);
+          console.error('Failed to add Session Replay plugin:', error);
+          console.error('Error details:', error.message);
           return false;
         }
       };
@@ -421,7 +413,7 @@
         type: 'utility',
         version: '1.0.0',
         isLoaded: () => !!sessionReplayPlugin,
-        load: initializeAmplitude,
+        load: initializeSessionReplay,
         startRecording: startRecording,
         stopRecording: stopRecording,
         isRecording: () => isRecording,
@@ -432,16 +424,29 @@
     // Register production plugins
     async function registerProductionPlugins() {
       try {
+        console.log('=== Starting plugin registration ===');
+        
         // UTM Plugin
+        console.log('Registering UTM plugin...');
         await window.analytics.register(window.utmCampaignPlugin());
         
         // Session ID Plugin
+        console.log('Registering Session ID plugin...');
         await window.analytics.register(window.sessionIdPlugin());
         
         // Session Recording Controller
+        console.log('Creating and initializing recording controller...');
         window.recordingController = window.sessionRecordingController();
-        await window.recordingController.load(); // Initialize Amplitude
-        await window.analytics.register(window.recordingController);
+        
+        const amplitudeReady = await window.recordingController.load(); // Initialize Amplitude
+        console.log('Amplitude initialization result:', amplitudeReady);
+        
+        if (amplitudeReady) {
+          await window.analytics.register(window.recordingController);
+          console.log('Recording controller registered successfully');
+        } else {
+          console.warn('Amplitude failed to initialize, but continuing with other plugins');
+        }
         
         updateAnalyticsStatus();
         return true;
