@@ -293,27 +293,20 @@
       };
     };
 
-    // Lightweight Session Recording Controller - Demo mode (100% sampling)
+    // Lightweight Session Recording Controller - Manual control mode
     window.sessionRecordingController = () => {
       const SAMPLE_RATE = 1.0; // 100% for demo purposes
       let isRecording = false;
       let recordingStartTime = null;
       
-      const shouldRecord = () => {
-        // For demo: always record
-        return true;
-      };
-      
       const startRecording = () => {
-        if (isRecording) return false;
-        
         try {
           if (!window.amplitude?.sessionReplay) return false;
           
           window.amplitude.sessionReplay.start();
           isRecording = true;
           recordingStartTime = Date.now();
-          console.log('Session recording started (demo mode - 100% sample)');
+          console.log('Session recording started (manual control)');
           return true;
         } catch (error) {
           return false;
@@ -350,10 +343,7 @@
         isLoaded: () => true,
         
         load: () => {
-          // Auto-start recording for demo
-          setTimeout(() => {
-            startRecording();
-          }, 1000);
+          // Manual control only - no auto-start
           return Promise.resolve();
         },
         
@@ -420,7 +410,7 @@
         const started = window.recordingController.startRecording();
         const message = started 
           ? 'Recording started successfully' 
-          : 'Recording not started (not in 5% sample or already active)';
+          : 'Recording failed to start or already active';
         
         updateStatus('recording-status', started ? 'success' : 'info', message);
       }
