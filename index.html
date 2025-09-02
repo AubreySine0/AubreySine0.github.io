@@ -39,6 +39,46 @@
   }}();
   </script>
 
+  <!-- Load Amplitude SDK with Session Replay -->
+  <script src="https://cdn.amplitude.com/libs/analytics-browser-2.0.0-min.js.gz"></script>
+  <script src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1.0.0-min.js.gz"></script>
+  
+  <script>
+    // Initialize Amplitude with Session Replay
+    window.initializeAmplitudeSessionReplay = function() {
+      return new Promise((resolve, reject) => {
+        try {
+          // Initialize Amplitude
+          window.amplitude.init('demo-api-key', {
+            defaultTracking: {
+              sessions: true,
+              pageViews: true,
+              formInteractions: true,
+              fileDownloads: true
+            }
+          });
+
+          // Add Session Replay plugin
+          const sessionReplayPlugin = new window.amplitudeSessionReplay.sessionReplayPlugin({
+            sampleRate: 1, // 100% for demo
+            masking: {
+              maskAllInputs: false,
+              maskAllText: false
+            }
+          });
+
+          window.amplitude.add(sessionReplayPlugin);
+          
+          console.log('Amplitude with Session Replay initialized');
+          resolve();
+        } catch (error) {
+          console.error('Failed to initialize Amplitude Session Replay:', error);
+          reject(error);
+        }
+      });
+    };
+  </script>
+
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -311,18 +351,22 @@
             return false;
           }
           
-          if (!window.amplitude.sessionReplay) {
-            console.error('Amplitude sessionReplay not found');
-            console.log('Available amplitude methods:', Object.keys(window.amplitude));
+          // Check if sessionReplay plugin is available
+          const sessionReplayPlugin = window.amplitude._plugins?.find(p => p.name === 'session-replay');
+          console.log('Session replay plugin found:', !!sessionReplayPlugin);
+          
+          if (sessionReplayPlugin && sessionReplayPlugin.startRecording) {
+            console.log('Calling sessionReplayPlugin.startRecording()...');
+            sessionReplayPlugin.startRecording();
+            isRecording = true;
+            recordingStartTime = Date.now();
+            console.log('Session recording started successfully (manual control)');
+            return true;
+          } else {
+            console.error('Session replay plugin not found or startRecording method unavailable');
+            console.log('Available plugins:', window.amplitude._plugins?.map(p => p.name) || []);
             return false;
           }
-          
-          console.log('Calling amplitude.sessionReplay.start()...');
-          window.amplitude.sessionReplay.start();
-          isRecording = true;
-          recordingStartTime = Date.now();
-          console.log('Session recording started successfully (manual control)');
-          return true;
         } catch (error) {
           console.error('Error starting recording:', error);
           return false;
@@ -333,21 +377,28 @@
         if (!isRecording) return false;
         
         try {
-          if (!window.amplitude?.sessionReplay) return false;
+          const sessionReplayPlugin = window.amplitude._plugins?.find(p => p.name === 'session-replay');
           
-          window.amplitude.sessionReplay.stop();
-          const duration = Date.now() - recordingStartTime;
-          isRecording = false;
-          recordingStartTime = null;
-          
-          if (window.analytics) {
-            window.analytics.track('Session Recording Completed', {
-              recordingDuration: duration
-            });
+          if (sessionReplayPlugin && sessionReplayPlugin.stopRecording) {
+            sessionReplayPlugin.stopRecording();
+            const duration = Date.now() - recordingStartTime;
+            isRecording = false;
+            recordingStartTime = null;
+            
+            if (window.analytics) {
+              window.analytics.track('Session Recording Completed', {
+                recordingDuration: duration
+              });
+            }
+            
+            console.log('Session recording stopped successfully');
+            return true;
+          } else {
+            console.error('Session replay plugin not found or stopRecording method unavailable');
+            return false;
           }
-          
-          return true;
         } catch (error) {
+          console.error('Error stopping recording:', error);
           return false;
         }
       };
@@ -374,6 +425,9 @@
     // Register production plugins
     async function registerProductionPlugins() {
       try {
+        // Initialize Amplitude Session Replay first
+        await window.initializeAmplitudeSessionReplay();
+        
         // UTM Plugin
         await window.analytics.register(window.utmCampaignPlugin());
         
