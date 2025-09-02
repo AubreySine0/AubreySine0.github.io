@@ -300,15 +300,31 @@
       let recordingStartTime = null;
       
       const startRecording = () => {
+        console.log('=== DEBUG: Starting recording ===');
+        console.log('window.amplitude exists:', !!window.amplitude);
+        console.log('window.amplitude.sessionReplay exists:', !!window.amplitude?.sessionReplay);
+        console.log('Current isRecording state:', isRecording);
+        
         try {
-          if (!window.amplitude?.sessionReplay) return false;
+          if (!window.amplitude) {
+            console.error('Amplitude not found on window');
+            return false;
+          }
           
+          if (!window.amplitude.sessionReplay) {
+            console.error('Amplitude sessionReplay not found');
+            console.log('Available amplitude methods:', Object.keys(window.amplitude));
+            return false;
+          }
+          
+          console.log('Calling amplitude.sessionReplay.start()...');
           window.amplitude.sessionReplay.start();
           isRecording = true;
           recordingStartTime = Date.now();
-          console.log('Session recording started (manual control)');
+          console.log('Session recording started successfully (manual control)');
           return true;
         } catch (error) {
+          console.error('Error starting recording:', error);
           return false;
         }
       };
@@ -406,13 +422,22 @@
     }
     
     function startRecording() {
+      console.log('=== UI: Start Recording button clicked ===');
+      console.log('recordingController exists:', !!window.recordingController);
+      console.log('recordingController.startRecording exists:', !!window.recordingController?.startRecording);
+      
       if (window.recordingController && window.recordingController.startRecording) {
         const started = window.recordingController.startRecording();
+        console.log('Recording start result:', started);
+        
         const message = started 
           ? 'Recording started successfully' 
           : 'Recording failed to start or already active';
         
         updateStatus('recording-status', started ? 'success' : 'info', message);
+      } else {
+        console.error('Recording controller not available');
+        updateStatus('recording-status', 'info', 'Recording controller not available');
       }
     }
     
@@ -428,19 +453,27 @@
     }
     
     function checkRecordingStatus() {
+      console.log('=== DEBUG: Checking recording status ===');
+      console.log('recordingController exists:', !!window.recordingController);
+      console.log('window.amplitude exists:', !!window.amplitude);
+      console.log('window.amplitude keys:', window.amplitude ? Object.keys(window.amplitude) : 'N/A');
+      
       if (window.recordingController) {
         const isRecording = window.recordingController.isRecording();
         const sampleRate = window.recordingController.getSampleRate();
-        const sampled = sessionStorage.getItem('segment_recording_sampled') === 'true';
+        
+        console.log('Internal isRecording state:', isRecording);
+        console.log('Sample rate:', sampleRate);
         
         const status = isRecording 
           ? 'Recording ACTIVE' 
-          : sampled 
-            ? 'Session sampled but recording inactive'
-            : 'Session not sampled for recording';
+          : 'Recording INACTIVE';
             
         updateStatus('recording-status', 'info', 
-          `Status: ${status} (Sample rate: ${(sampleRate * 100).toFixed(1)}%)`);
+          `Status: ${status} (Sample rate: ${(sampleRate * 100).toFixed(1)}%) | Check console for debug info`);
+      } else {
+        console.error('Recording controller not found');
+        updateStatus('recording-status', 'info', 'Recording controller not found');
       }
     }
     
