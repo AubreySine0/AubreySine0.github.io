@@ -311,17 +311,39 @@
           // Wait for Segment to load Amplitude
           await new Promise((resolve) => {
             const checkAmplitude = () => {
-              if (window.amplitude && window.amplitudeSessionReplay) {
-                console.log('Amplitude (from Segment) and Session Replay plugin available');
-                resolve();
+              // Check if Segment has loaded and initialized Amplitude
+              const segmentAmplitude = window.amplitude;
+              const sessionReplayAvailable = window.amplitudeSessionReplay;
+              
+              console.log('Checking availability:');
+              console.log('- Segment Amplitude instance:', !!segmentAmplitude);
+              console.log('- Amplitude initialized:', segmentAmplitude && segmentAmplitude._isInitialized !== false);
+              console.log('- Session Replay plugin:', !!sessionReplayAvailable);
+              
+              if (segmentAmplitude && sessionReplayAvailable) {
+                // Extra check: make sure Amplitude is actually initialized by Segment
+                if (segmentAmplitude.add && typeof segmentAmplitude.add === 'function') {
+                  console.log('✅ Both Amplitude (from Segment) and Session Replay are ready');
+                  resolve();
+                } else {
+                  console.log('⏳ Amplitude exists but not fully initialized yet...');
+                  setTimeout(checkAmplitude, 200);
+                }
               } else {
-                console.log('Waiting for Amplitude from Segment and Session Replay plugin...');
-                console.log('window.amplitude:', !!window.amplitude);
-                console.log('window.amplitudeSessionReplay:', !!window.amplitudeSessionReplay);
-                setTimeout(checkAmplitude, 500);
+                console.log('⏳ Still waiting for dependencies...');
+                setTimeout(checkAmplitude, 200);
               }
             };
-            checkAmplitude();
+            
+            // Start checking immediately, but also check after Segment analytics is ready
+            if (window.analytics && window.analytics.ready) {
+              window.analytics.ready(() => {
+                console.log('Segment analytics ready, checking for Amplitude...');
+                setTimeout(checkAmplitude, 100); // Small delay to let Amplitude initialize
+              });
+            } else {
+              checkAmplitude();
+            }
           });
 
           console.log('Creating session replay plugin...');
@@ -438,14 +460,16 @@
         console.log('Creating and initializing recording controller...');
         window.recordingController = window.sessionRecordingController();
         
-        const amplitudeReady = await window.recordingController.load(); // Initialize Amplitude
-        console.log('Amplitude initialization result:', amplitudeReady);
+        // Wait for Segment analytics to be ready before trying to add Session Replay
+        console.log('Waiting for optimal timing to add Session Replay...');
+        const amplitudeReady = await window.recordingController.load();
+        console.log('Session Replay initialization result:', amplitudeReady);
         
         if (amplitudeReady) {
           await window.analytics.register(window.recordingController);
           console.log('Recording controller registered successfully');
         } else {
-          console.warn('Amplitude failed to initialize, but continuing with other plugins');
+          console.warn('Session Replay failed to initialize, but continuing with other plugins');
         }
         
         updateAnalyticsStatus();
