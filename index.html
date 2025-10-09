@@ -22,14 +22,15 @@
     function OptanonWrapper() {
       console.log('OneTrust OptanonWrapper called - initializing consent');
       
-      // Initialize Segment with OneTrust consent wrapper
-      if (window.withOneTrust) {
-        window.withOneTrust(window.analytics).load({
-          writeKey: "gmILwcgOaqputqVmLZKtD0eazHCAeNhR",
-          shouldLoadSegmentSDK: true
+      // Initialize Segment with OneTrust consent wrapper in OPT-OUT mode
+      if (window.withOneTrust && window.analytics) {
+        window.withOneTrust(window.analytics, { 
+          consentModel: () => 'opt-out'
+        }).load({
+          writeKey: "gmILwcgOaqputqVmLZKtD0eazHCAeNhR"
         });
         
-        console.log('Segment initialized with OneTrust consent wrapper');
+        console.log('Segment initialized with OneTrust consent wrapper (OPT-OUT model)');
         
         // Wait for analytics ready
         window.analytics.ready(function() {
@@ -43,6 +44,8 @@
             window.analytics.page();
           });
         });
+      } else {
+        console.error('withOneTrust or analytics not available');
       }
     }
   </script>
