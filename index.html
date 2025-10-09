@@ -21,19 +21,32 @@
   <script type="text/javascript">
     // Initialize the wrapper with OneTrust
     function OptanonWrapper() {
-      console.log('OneTrust OptanonWrapper called - initializing consent');
+      console.log('=== OneTrust OptanonWrapper called ===');
+      console.log('OneTrust object exists:', typeof window.OneTrust !== 'undefined');
+      console.log('OnetrustActiveGroups:', window.OnetrustActiveGroups);
+      console.log('OneTrust.GetDomainData():', window.OneTrust?.GetDomainData?.());
+      
+      // Check if consent has been given
+      if (window.OneTrust && window.OneTrust.IsAlertBoxClosed) {
+        console.log('OneTrust alert box closed (consent given):', window.OneTrust.IsAlertBoxClosed());
+      }
       
       // Initialize Segment with OneTrust consent wrapper in OPT-OUT mode
       if (window.withOneTrust && window.analytics) {
-        window.withOneTrust(window.analytics, { 
+        const consentedAnalytics = window.withOneTrust(window.analytics, { 
           consentModel: () => 'opt-out'
-        }).load("gmILwcgOaqputqVmLZKtD0eazHCAeNhR");
+        });
+        
+        console.log('withOneTrust wrapper created');
+        
+        consentedAnalytics.load("gmILwcgOaqputqVmLZKtD0eazHCAeNhR");
         
         console.log('Segment initialized with OneTrust consent wrapper (OPT-OUT model)');
         
         // Wait for analytics ready
         window.analytics.ready(function() {
-          console.log('Analytics ready - registering production plugins');
+          console.log('=== Analytics ready ===');
+          console.log('Consent object:', window.analytics.user().consent());
           
           registerProductionPlugins().then(function() {
             console.log('Production plugins registered - sending first page call');
@@ -45,6 +58,8 @@
         });
       } else {
         console.error('withOneTrust or analytics not available');
+        console.error('withOneTrust exists:', typeof window.withOneTrust !== 'undefined');
+        console.error('analytics exists:', typeof window.analytics !== 'undefined');
       }
     }
   </script>
@@ -171,6 +186,7 @@
       <div id="analytics-status" class="status info">
         Waiting for consent...
       </div>
+      <button onclick="checkConsentStatus()">Check Consent Status</button>
     </div>
 
     <!-- Event Testing Section -->
