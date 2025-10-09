@@ -18,35 +18,38 @@
   <!-- Load Segment Consent Wrapper -->
   <script src="https://unpkg.com/@segment/analytics-consent-wrapper-onetrust@latest/dist/umd/analytics-onetrust.umd.js"></script>
   
+  <!-- Segment Analytics Snippet (modified for consent wrapper) -->
+  <script>
+  !function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="gmILwcgOaqputqVmLZKtD0eazHCAeNhR";analytics.SNIPPET_VERSION="5.2.0";
+  
+  // NOTE: analytics.load() is now called from OptanonWrapper after consent is ready
+  // This ensures Segment only loads after OneTrust consent is obtained
+  }}();
+  </script>
+  
   <script type="text/javascript">
+    let segmentInitialized = false;
+    
     // Initialize the wrapper with OneTrust
     function OptanonWrapper() {
       console.log('=== OneTrust OptanonWrapper called ===');
-      console.log('OneTrust object exists:', typeof window.OneTrust !== 'undefined');
+      console.log('Segment already initialized:', segmentInitialized);
       console.log('OnetrustActiveGroups:', window.OnetrustActiveGroups);
-      console.log('OneTrust.GetDomainData():', window.OneTrust?.GetDomainData?.());
       
-      // Check if consent has been given
-      if (window.OneTrust && window.OneTrust.IsAlertBoxClosed) {
-        console.log('OneTrust alert box closed (consent given):', window.OneTrust.IsAlertBoxClosed());
-      }
-      
-      // Initialize Segment with OneTrust consent wrapper in OPT-OUT mode
-      if (window.withOneTrust && window.analytics) {
-        const consentedAnalytics = window.withOneTrust(window.analytics, { 
+      // Only initialize Segment once
+      if (!segmentInitialized && window.withOneTrust && window.analytics) {
+        console.log('Initializing Segment with OneTrust wrapper...');
+        
+        window.withOneTrust(window.analytics, { 
           consentModel: () => 'opt-out'
-        });
+        }).load("gmILwcgOaqputqVmLZKtD0eazHCAeNhR");
         
-        console.log('withOneTrust wrapper created');
-        
-        consentedAnalytics.load("gmILwcgOaqputqVmLZKtD0eazHCAeNhR");
-        
+        segmentInitialized = true;
         console.log('Segment initialized with OneTrust consent wrapper (OPT-OUT model)');
         
         // Wait for analytics ready
         window.analytics.ready(function() {
           console.log('=== Analytics ready ===');
-          console.log('Consent object:', window.analytics.user().consent());
           
           registerProductionPlugins().then(function() {
             console.log('Production plugins registered - sending first page call');
@@ -56,21 +59,11 @@
             window.analytics.page();
           });
         });
-      } else {
-        console.error('withOneTrust or analytics not available');
-        console.error('withOneTrust exists:', typeof window.withOneTrust !== 'undefined');
-        console.error('analytics exists:', typeof window.analytics !== 'undefined');
+      } else if (segmentInitialized) {
+        console.log('Segment already initialized - consent updated');
+        console.log('New OnetrustActiveGroups:', window.OnetrustActiveGroups);
       }
     }
-  </script>
-
-  <!-- Segment Analytics Snippet (modified for consent wrapper) -->
-  <script>
-  !function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="gmILwcgOaqputqVmLZKtD0eazHCAeNhR";analytics.SNIPPET_VERSION="5.2.0";
-  
-  // NOTE: analytics.load() is now called from OptanonWrapper after consent is ready
-  // This ensures Segment only loads after OneTrust consent is obtained
-  }}();
   </script>
 
   <style>
@@ -353,6 +346,35 @@
     }
     
     // UI Functions
+    function checkConsentStatus() {
+      console.log('=== Manual Consent Check ===');
+      console.log('OnetrustActiveGroups:', window.OnetrustActiveGroups);
+      console.log('OneTrust.IsAlertBoxClosed():', window.OneTrust?.IsAlertBoxClosed?.());
+      
+      // Try to get consent from Segment
+      try {
+        const consentData = window.analytics?.user?.()?.consent?.();
+        console.log('Segment consent data:', consentData);
+        
+        const statusEl = document.getElementById('analytics-status');
+        
+        if (consentData && consentData.categoryPreferences) {
+          const categories = Object.entries(consentData.categoryPreferences)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(', ');
+          
+          statusEl.className = 'status info';
+          statusEl.innerHTML = `Consent Status: ${categories}`;
+        } else {
+          statusEl.className = 'status info';
+          statusEl.innerHTML = `No consent data available yet. OnetrustActiveGroups: ${window.OnetrustActiveGroups}`;
+        }
+      } catch (error) {
+        console.error('Error checking consent:', error);
+        document.getElementById('analytics-status').innerHTML = `Error: ${error.message}`;
+      }
+    }
+    
     function updateAnalyticsStatus() {
       const statusEl = document.getElementById('analytics-status');
       const integrations = window.analytics.settings?.cdnSettings?.integrations || {};
