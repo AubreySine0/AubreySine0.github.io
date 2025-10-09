@@ -13,31 +13,47 @@
     charset="UTF-8"
     data-domain-script="01929b9b-c505-7cd6-9ca1-67e5e5aa979e"
   ></script>
+  
+  <!-- Load Segment Consent Wrapper -->
+  <script src="https://unpkg.com/@segment/analytics-consent-wrapper-onetrust@latest/dist/umd/analytics-onetrust.umd.js"></script>
+  
   <script type="text/javascript">
-    function OptanonWrapper() {}
+    // Initialize the wrapper with OneTrust
+    function OptanonWrapper() {
+      console.log('OneTrust OptanonWrapper called - initializing consent');
+      
+      // Initialize Segment with OneTrust consent wrapper
+      if (window.withOneTrust) {
+        window.withOneTrust(window.analytics).load({
+          writeKey: "gmILwcgOaqputqVmLZKtD0eazHCAeNhR",
+          shouldLoadSegmentSDK: true
+        });
+        
+        console.log('Segment initialized with OneTrust consent wrapper');
+        
+        // Wait for analytics ready
+        window.analytics.ready(function() {
+          console.log('Analytics ready - registering production plugins');
+          
+          registerProductionPlugins().then(function() {
+            console.log('Production plugins registered - sending first page call');
+            window.analytics.page();
+          }).catch(function(error) {
+            console.error('Plugin registration failed:', error);
+            window.analytics.page();
+          });
+        });
+      }
+    }
   </script>
 
-  <!-- Segment Analytics setup with controlled page call -->
+  <!-- Segment Analytics Snippet (modified for consent wrapper) -->
   <script>
-  !function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="gmILwcgOaqputqVmLZKtD0eazHCAeNhR";;analytics.SNIPPET_VERSION="5.2.0";
+  !function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="gmILwcgOaqputqVmLZKtD0eazHCAeNhR";analytics.SNIPPET_VERSION="5.2.0";
   
-  // Load analytics and wait for ready before first page call
-  analytics.load("gmILwcgOaqputqVmLZKtD0eazHCAeNhR");
-  
-  analytics.ready(function() {
-    console.log('Analytics ready - registering production plugins');
-    
-    registerProductionPlugins().then(function() {
-      console.log('Production plugins registered - sending first page call');
-      analytics.page();
-    }).catch(function(error) {
-      console.error('Plugin registration failed:', error);
-      // Send page call anyway
-      analytics.page();
-    });
-  });
+  // NOTE: analytics.load() is now called from OptanonWrapper after consent is ready
+  // This ensures Segment only loads after OneTrust consent is obtained
   }}();
-  </script>
   </script>
 
   <style>
@@ -127,18 +143,31 @@
       margin-right: 10px;
       width: 200px;
     }
+    
+    .consent-note {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Segment Analytics - Production Ready v37</h1>
-    <p class="subtitle">Optimized configuration: UTM Campaign Persistence + Session ID tracking</p>
+    <p class="subtitle">Optimized configuration: UTM Campaign Persistence + Session ID tracking + OneTrust Consent</p>
+    
+    <div class="consent-note">
+      🔒 <strong>Privacy:</strong> This site uses OneTrust consent management. Analytics will only load after you've accepted cookies via the consent banner.
+    </div>
     
     <!-- Status Section -->
     <div class="section">
       <h3>Analytics Status</h3>
       <div id="analytics-status" class="status info">
-        Analytics loading...
+        Waiting for consent...
       </div>
     </div>
 
@@ -312,7 +341,7 @@
       const configuredCount = Object.keys(integrations).length;
       
       statusEl.className = 'status success';
-      statusEl.innerHTML = `Analytics ready with ${configuredCount} destinations. Production plugins loaded: UTM Campaign Persistence, Session ID tracking`;
+      statusEl.innerHTML = `✅ Analytics ready with ${configuredCount} destinations. Production plugins loaded: UTM Campaign Persistence, Session ID tracking, OneTrust Consent`;
     }
     
     function sendTrackEvent() {
@@ -334,62 +363,7 @@
       updateStatus('event-status', 'success', `Identify sent for user: ${userId}`);
     }
     
-    function startRecording() {
-      console.log('=== UI: Start Recording button clicked ===');
-      console.log('recordingController exists:', !!window.recordingController);
-      console.log('recordingController.startRecording exists:', !!window.recordingController?.startRecording);
-      
-      if (window.recordingController && window.recordingController.startRecording) {
-        const started = window.recordingController.startRecording();
-        console.log('Recording start result:', started);
-        
-        const message = started 
-          ? 'Recording started successfully' 
-          : 'Recording failed to start or already active';
-        
-        updateStatus('recording-status', started ? 'success' : 'info', message);
-      } else {
-        console.error('Recording controller not available');
-        updateStatus('recording-status', 'info', 'Recording controller not available');
-      }
-    }
-    
-    function stopRecording() {
-      if (window.recordingController && window.recordingController.stopRecording) {
-        const stopped = window.recordingController.stopRecording();
-        const message = stopped 
-          ? 'Recording stopped successfully' 
-          : 'No active recording to stop';
-          
-        updateStatus('recording-status', stopped ? 'success' : 'info', message);
-      }
-    }
-    
-    function checkRecordingStatus() {
-      console.log('=== DEBUG: Checking recording status ===');
-      console.log('recordingController exists:', !!window.recordingController);
-      
-      if (window.recordingController) {
-        const isRecording = window.recordingController.isRecording();
-        const sampleRate = window.recordingController.getSampleRate();
-        
-        console.log('Internal isRecording state:', isRecording);
-        console.log('Sample rate:', sampleRate);
-        
-        const status = isRecording 
-          ? 'Mock Recording ACTIVE' 
-          : 'Mock Recording INACTIVE';
-            
-        updateStatus('recording-status', 'info', 
-          `Status: ${status} (Sample rate: ${(sampleRate * 100).toFixed(1)}%) | This is a mock demo - tracks events to analytics`);
-      } else {
-        console.error('Recording controller not found');
-        updateStatus('recording-status', 'info', 'Recording controller not found');
-      }
-    }
-    
     function simulateUTMVisit(source, medium, campaign) {
-      // Simulate a page view with UTM parameters by creating a mock context
       const mockUTMContext = {
         campaign: {
           source: source,
@@ -398,7 +372,6 @@
         }
       };
       
-      // Send a page event with UTM context to trigger the plugin
       window.analytics.page('UTM Test Page', {
         utm_simulation: true,
         simulated_source: source
@@ -411,7 +384,6 @@
     }
     
     function simulateCleanPageView() {
-      // Send a page view without UTM parameters to test persistence
       window.analytics.page('Clean Page View', {
         utm_simulation: false,
         test_persistence: true
