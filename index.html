@@ -26,9 +26,7 @@
       if (window.withOneTrust && window.analytics) {
         window.withOneTrust(window.analytics, { 
           consentModel: () => 'opt-out'
-        }).load({
-          writeKey: "gmILwcgOaqputqVmLZKtD0eazHCAeNhR"
-        });
+        }).load("gmILwcgOaqputqVmLZKtD0eazHCAeNhR");
         
         console.log('Segment initialized with OneTrust consent wrapper (OPT-OUT model)');
         
