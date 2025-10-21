@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subdomain - Segment Session Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            border-left: 4px solid #ed8936;
+            padding-left: 15px;
+        }
+        .domain-badge {
+            display: inline-block;
+            background: #ed8936;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .info-box {
+            background: #fef5e7;
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-box h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        .info-box p {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+        .session-display {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .session-item:last-child {
+            border-bottom: none;
+        }
+        .session-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .session-value {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #2d3748;
+            background: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            word-break: break-all;
+            max-width: 400px;
+        }
+        .comparison-box {
+            border: 3px solid #38b2ac;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+        }
+        .comparison-box h3 {
+            color: #234e52;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        .comparison-row {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            align-items: center;
+        }
+        .comparison-label {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 14px;
+        }
+        .comparison-value {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #4a5568;
+            word-break: break-all;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .result-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 2px solid #48bb78;
+        }
+        .result-fail {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 2px solid #f56565;
+        }
+        .result-waiting {
+            background: #fef5e7;
+            color: #78350f;
+            border: 2px solid #f59e0b;
+        }
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+        }
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+        .btn-back {
+            grid-column: 1 / -1;
+            background: #805ad5;
+            color: white;
+            font-size: 18px;
+        }
+        .btn-back:hover {
+            background: #6b46c1;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(128, 90, 213, 0.4);
+        }
+        .cookie-inspector {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .cookie-inspector h4 {
+            color: #90cdf4;
+            margin-bottom: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .cookie-line {
+            padding: 4px 0;
+            color: #cbd5e0;
+        }
+        .cookie-line.highlight {
+            color: #68d391;
+            font-weight: bold;
+        }
+        .note {
+            background: #fff5f5;
+            border-left: 4px solid #f56565;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #742a2a;
+        }
+        .test-mode {
+            background: #e6fffa;
+            border-left: 4px solid #38b2ac;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #234e52;
+        }
+        .test-mode strong {
+            color: #234e52;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Subdomain</h1>
+        <span class="domain-badge">Subdomain</span>
+
+        <div class="test-mode">
+            <strong>🧪 Testing Default Behavior</strong><br>
+            This page checks if Segment automatically passes the session ID from the main domain to this subdomain without any manual configuration.
+        </div>
+
+        <div class="info-box">
+            <h3>📍 You are on the SUBDOMAIN</h3>
+            <p>This page checks whether the session ID from the main domain persisted here automatically.</p>
+        </div>
+
+        <div class="session-display">
+            <h3 style="margin-bottom: 15px; color: #2d3748;">Current Session Info (Subdomain):</h3>
+            <div class="session-item">
+                <span class="session-label">Session ID:</span>
+                <span class="session-value" id="session-id">Waiting for Segment...</span>
+            </div>
+            <div class="session-item">
+                <span class="session-label">Anonymous ID:</span>
+                <span class="session-value" id="anonymous-id">Waiting for Segment...</span>
+            </div>
+            <div class="session-item">
+                <span class="session-label">User ID:</span>
+                <span class="session-value" id="user-id">Not set</span>
+            </div>
+            <div class="session-item">
+                <span class="session-label">Last Event:</span>
+                <span class="session-value" id="last-event">None</span>
+            </div>
+            <div class="session-item">
+                <span class="session-label">Page Loaded:</span>
+                <span class="session-value" id="page-loaded">-</span>
+            </div>
+        </div>
+
+        <div class="comparison-box" id="comparison-box">
+            <h3>🔬 Session ID Comparison: Main Domain vs Subdomain</h3>
+            
+            <div class="comparison-row">
+                <span class="comparison-label">Main Domain:</span>
+                <span class="comparison-value" id="main-session-id">-</span>
+            </div>
+            
+            <div class="comparison-row">
+                <span class="comparison-label">Subdomain:</span>
+                <span class="comparison-value" id="sub-session-id">-</span>
+            </div>
+            
+            <div class="comparison-row">
+                <span class="comparison-label">Anonymous ID (Main):</span>
+                <span class="comparison-value" id="main-anonymous-id">-</span>
+            </div>
+            
+            <div class="comparison-row">
+                <span class="comparison-label">Anonymous ID (Sub):</span>
+                <span class="comparison-value" id="sub-anonymous-id">-</span>
+            </div>
+            
+            <div id="test-result" class="result-box result-waiting">
+                ⏳ Loading session data...
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-primary" onclick="loadSession()">🔄 Refresh Session Info</button>
+            <button class="btn btn-success" onclick="trackTestEvent()">📊 Track Test Event</button>
+            <button class="btn btn-back" onclick="goBack()">
+                ⬅️ Back to Main Domain
+            </button>
+        </div>
+
+        <div class="cookie-inspector">
+            <h4>🍪 All Cookies & Storage:</h4>
+            <div id="cookie-display">Loading...</div>
+        </div>
+
+        <div class="note">
+            <strong>🔬 What to Look For:</strong><br>
+            ✅ <strong>SUCCESS</strong>: Session IDs match = Segment automatically persisted the session<br>
+            ❌ <strong>FAIL</strong>: Session IDs differ = New session created (default behavior doesn't persist)<br>
+            <br>
+            Check your browser's DevTools (F12 → Application → Cookies) to see cookie domain settings.
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // INSERT YOUR SEGMENT ANALYTICS.JS 2.0 SNIPPET HERE
+        // =================================================================
+        // Same snippet as in index.html
+        
+        // PASTE YOUR SEGMENT SNIPPET HERE:
+        
+        
+        
+        // =================================================================
+        // END SEGMENT SNIPPET
+        // =================================================================
+
+        !function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="vCDB7HYMf9IU3VEyJesnqLKrkybRGHb2";;analytics.SNIPPET_VERSION="5.2.0";
+        analytics.load("vCDB7HYMf9IU3VEyJesnqLKrkybRGHb2");
+        analytics.page();
+        }}();
+        // Store session info globally
+        window.subdomainSessionInfo = {
+            timestamp: new Date().toISOString()
+        };
+
+        let mainDomainData = null;
+
+        // Helper function to get cookies
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // Helper function to get from localStorage
+        function getLocalStorage(key) {
+            try {
+                return localStorage.getItem(key);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Helper function to get all localStorage keys
+        function getAllLocalStorage() {
+            const items = {};
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    items[key] = localStorage.getItem(key);
+                }
+            } catch (e) {
+                console.error('Could not access localStorage:', e);
+            }
+            return items;
+        }
+
+        // Load main domain session data
+        function loadMainDomainData() {
+            try {
+                const stored = localStorage.getItem('test_main_session_data');
+                if (stored) {
+                    mainDomainData = JSON.parse(stored);
+                    console.log('📥 Loaded main domain data:', mainDomainData);
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Could not load main domain data:', e);
+            }
+            return false;
+        }
+
+        // Load and display session information
+        function loadSession() {
+            console.log('🔍 Loading session information...');
+            
+            // Get session ID from cookie
+            const sessionIdFromCookie = getLocalStorage('analytics_session_id');
+            
+            // Get anonymous ID
+            let anonymousId = 'Not found';
+            if (typeof analytics !== 'undefined' && analytics.user) {
+                try {
+                    anonymousId = analytics.user().anonymousId() || 'Not set';
+                } catch (e) {
+                    console.warn('Could not get anonymous ID from Segment:', e);
+                    // Try localStorage as fallback
+                    const stored = getLocalStorage('ajs_anonymous_id');
+                    if (stored) {
+                        anonymousId = stored.replace(/"/g, '');
+                    }
+                }
+            }
+
+            // Get user ID if set
+            let userId = 'Not set';
+            if (typeof analytics !== 'undefined' && analytics.user) {
+                try {
+                    userId = analytics.user().id() || 'Not set';
+                } catch (e) {
+                    console.warn('Could not get user ID:', e);
+                }
+            }
+            
+            // Update display
+            document.getElementById('session-id').textContent = 
+                sessionIdFromCookie || 'Not found in cookies';
+            document.getElementById('anonymous-id').textContent = anonymousId;
+            document.getElementById('user-id').textContent = userId;
+            document.getElementById('page-loaded').textContent = 
+                new Date().toLocaleTimeString();
+            
+            // Store current subdomain info
+            window.subdomainSessionInfo = {
+                sessionId: sessionIdFromCookie,
+                anonymousId: anonymousId,
+                userId: userId,
+                timestamp: new Date().toISOString(),
+                url: window.location.href
+            };
+            
+            // Update comparison
+            updateComparison();
+            
+            // Update cookie inspector
+            updateCookieInspector();
+            
+            // Log to console
+            console.log('📊 Subdomain Session Info:', window.subdomainSessionInfo);
+        }
+
+        // Update comparison display
+        function updateComparison() {
+            // Load main domain data if not already loaded
+            if (!mainDomainData) {
+                loadMainDomainData();
+            }
+
+            const resultBox = document.getElementById('test-result');
+            
+            if (!mainDomainData) {
+                // No main domain data
+                document.getElementById('main-session-id').textContent = 
+                    'No data from main domain (visit main domain first)';
+                document.getElementById('sub-session-id').textContent = 
+                    window.subdomainSessionInfo.sessionId || 'Not found';
+                document.getElementById('main-anonymous-id').textContent = '-';
+                document.getElementById('sub-anonymous-id').textContent = 
+                    window.subdomainSessionInfo.anonymousId || 'Not found';
+                
+                resultBox.className = 'result-box result-waiting';
+                resultBox.innerHTML = '⚠️ Navigate from main domain page first to test session persistence';
+                return;
+            }
+
+            // Display comparison
+            document.getElementById('main-session-id').textContent = 
+                mainDomainData.sessionId || 'Not found';
+            document.getElementById('sub-session-id').textContent = 
+                window.subdomainSessionInfo.sessionId || 'Not found';
+            document.getElementById('main-anonymous-id').textContent = 
+                mainDomainData.anonymousId || 'Not found';
+            document.getElementById('sub-anonymous-id').textContent = 
+                window.subdomainSessionInfo.anonymousId || 'Not found';
+
+            // Determine result
+            const sessionMatch = mainDomainData.sessionId && 
+                                window.subdomainSessionInfo.sessionId &&
+                                mainDomainData.sessionId === window.subdomainSessionInfo.sessionId;
+            
+            const anonymousMatch = mainDomainData.anonymousId && 
+                                  window.subdomainSessionInfo.anonymousId &&
+                                  mainDomainData.anonymousId === window.subdomainSessionInfo.anonymousId;
+
+            // Update result display
+            if (sessionMatch && anonymousMatch) {
+                resultBox.className = 'result-box result-success';
+                resultBox.innerHTML = '✅ SUCCESS: Session ID persisted across subdomain!<br><small>Both Session ID and Anonymous ID match</small>';
+                console.log('✅ Session persistence test PASSED');
+            } else if (anonymousMatch && !sessionMatch) {
+                resultBox.className = 'result-box result-fail';
+                resultBox.innerHTML = '⚠️ PARTIAL: Anonymous ID matches but Session ID differs<br><small>Session was not preserved, but user identity was</small>';
+                console.log('⚠️ Session persistence test PARTIAL - Anonymous ID matches only');
+            } else if (!anonymousMatch && !sessionMatch) {
+                resultBox.className = 'result-box result-fail';
+                resultBox.innerHTML = '❌ FAIL: Session ID did NOT persist<br><small>A new session was created on the subdomain</small>';
+                console.log('❌ Session persistence test FAILED');
+            } else {
+                resultBox.className = 'result-box result-waiting';
+                resultBox.innerHTML = '⏳ Inconclusive: Check console for details';
+                console.log('⚠️ Test results inconclusive');
+            }
+
+            // Log detailed comparison
+            console.log('🔬 Detailed Comparison:');
+            console.log('Main Domain:', mainDomainData);
+            console.log('Subdomain:', window.subdomainSessionInfo);
+            console.log('Session Match:', sessionMatch);
+            console.log('Anonymous ID Match:', anonymousMatch);
+        }
+
+        // Update cookie inspector display
+        function updateCookieInspector() {
+            const display = document.getElementById('cookie-display');
+            let output = '';
+            
+            // Show all cookies
+            output += '<div style="color: #90cdf4; margin-bottom: 8px;">COOKIES:</div>';
+            const cookies = document.cookie.split(';');
+            if (cookies.length > 0 && document.cookie !== '') {
+                cookies.forEach(c => {
+                    const trimmed = c.trim();
+                    const isAnalytics = trimmed.includes('analytics_') || 
+                                       trimmed.includes('ajs_') || 
+                                       trimmed.includes('amp_');
+                    const className = isAnalytics ? 'cookie-line highlight' : 'cookie-line';
+                    output += `<div class="${className}">${trimmed}</div>`;
+                });
+            } else {
+                output += '<div class="cookie-line">No cookies found</div>';
+            }
+            
+            // Show localStorage
+            output += '<div style="color: #90cdf4; margin: 16px 0 8px 0;">LOCALSTORAGE:</div>';
+            const localStorageItems = getAllLocalStorage();
+            const keys = Object.keys(localStorageItems);
+            if (keys.length > 0) {
+                keys.forEach(key => {
+                    const value = localStorageItems[key];
+                    const truncated = value.length > 60 ? value.substring(0, 57) + '...' : value;
+                    const isAnalytics = key.includes('ajs_') || 
+                                       key.includes('analytics_') || 
+                                       key.includes('amp_') ||
+                                       key.includes('test_');
+                    const className = isAnalytics ? 'cookie-line highlight' : 'cookie-line';
+                    output += `<div class="${className}">${key} = ${truncated}</div>`;
+                });
+            } else {
+                output += '<div class="cookie-line">No localStorage items</div>';
+            }
+            
+            display.innerHTML = output;
+            
+            // Also log to console for debugging
+            console.log('🍪 All Cookies:', document.cookie);
+            console.log('💾 All LocalStorage:', localStorageItems);
+        }
+
+        // Track a test event
+        function trackTestEvent() {
+            if (typeof analytics !== 'undefined' && analytics.track) {
+                const eventName = 'Test Event from Subdomain';
+                const properties = {
+                    location: 'subdomain',
+                    timestamp: new Date().toISOString(),
+                    test_id: Math.random().toString(36).substring(7)
+                };
+                
+                analytics.track(eventName, properties);
+                
+                document.getElementById('last-event').textContent = 
+                    `${eventName} at ${new Date().toLocaleTimeString()}`;
+                
+                console.log('✅ Event tracked:', eventName, properties);
+                
+                // Reload session info after tracking
+                setTimeout(loadSession, 500);
+            } else {
+                alert('⚠️ Segment analytics not loaded. Please add your Segment snippet to the HTML file.');
+                console.error('Segment analytics.track not available');
+            }
+        }
+
+        // Go back to main domain
+        function goBack() {
+            console.log('🚀 Navigating back to main domain...');
+            window.location.href = 'index.html';
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('🔗 Subdomain page loaded');
+            console.log('📍 Current URL:', window.location.href);
+            console.log('⏰ Page loaded at:', new Date().toISOString());
+            
+            // Check if we navigated from main domain
+            const navigatedFrom = localStorage.getItem('test_navigated_from');
+            if (navigatedFrom === 'main') {
+                console.log('✅ Detected navigation from main domain');
+            } else {
+                console.warn('⚠️ Did not detect navigation from main domain. Visit index.html first.');
+            }
+            
+            // Load main domain data
+            loadMainDomainData();
+            
+            // Wait for Segment to load
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            const checkSegment = setInterval(function() {
+                attempts++;
+                
+                if (typeof analytics !== 'undefined') {
+                    console.log('✅ Segment loaded successfully');
+                    clearInterval(checkSegment);
+                    loadSession();
+                    
+                    // Refresh every 3 seconds to show live updates
+                    setInterval(loadSession, 3000);
+                } else if (attempts >= maxAttempts) {
+                    console.warn('⚠️ Segment did not load after', maxAttempts, 'attempts');
+                    console.warn('Make sure you added your Segment snippet to the HTML file');
+                    clearInterval(checkSegment);
+                    document.getElementById('session-id').textContent = 'Segment not loaded';
+                    document.getElementById('anonymous-id').textContent = 'Segment not loaded';
+                    
+                    // Still try to show comparison
+                    updateComparison();
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>

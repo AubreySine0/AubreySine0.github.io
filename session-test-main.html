@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Domain - Segment Session Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            border-left: 4px solid #48bb78;
+            padding-left: 15px;
+        }
+        .domain-badge {
+            display: inline-block;
+            background: #48bb78;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .info-box {
+            background: #edf2f7;
+            border-left: 4px solid #4299e1;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-box h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        .info-box p {
+            color: #4a5568;
+            line-height: 1.6;
+        }
+        .session-display {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .session-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .session-item:last-child {
+            border-bottom: none;
+        }
+        .session-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .session-value {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #2d3748;
+            background: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            word-break: break-all;
+            max-width: 400px;
+        }
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+        }
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #e53e3e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 101, 101, 0.4);
+        }
+        .btn-navigate {
+            grid-column: 1 / -1;
+            background: #ed8936;
+            color: white;
+            font-size: 18px;
+        }
+        .btn-navigate:hover {
+            background: #dd6b20;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(237, 137, 54, 0.4);
+        }
+        .cookie-inspector {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .cookie-inspector h4 {
+            color: #90cdf4;
+            margin-bottom: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .cookie-line {
+            padding: 4px 0;
+            color: #cbd5e0;
+        }
+        .note {
+            background: #fef5e7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #78350f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 Main Domain</h1>
+        <span class="domain-badge">Main: example.com</span>
+
+        <div class="info-box">
+            <h3>📍 You are on the MAIN DOMAIN</h3>
+            <p>This page simulates <strong>example.com</strong>. Initialize the Segment tracking here, then navigate to the subdomain to test session persistence.</p>
+        </div>
+
+        <div class="session-display">
+            <h3 style="margin-bottom: 15px; color: #2d3748;">Current Session Info:</h3>
+            <div class="session-item">
+                <span class="session-label">Session ID:</span>
+                <span class="session-value" id="session-id">Not loaded</span>
+            </div>
+            <div class="session-item">
+                <span class="session-label">Device ID:</span>
+                <span class="session-value" id="device-id">Not loaded</span>
+            </div>
+            <div class="session-item">
+                <span class="session-label">Anonymous ID:</span>
+                <span class="session-value" id="anonymous-id">Not loaded</span>
+            </div>
+            <div class="session-item">
+                <span class="session-label">Last Event:</span>
+                <span class="session-value" id="last-event">None</span>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-primary" onclick="loadSession()">🔄 Refresh Session Info</button>
+            <button class="btn btn-success" onclick="trackTestEvent()">📊 Track Test Event</button>
+            <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+            <button class="btn btn-navigate" onclick="navigateToSubdomain()">
+                ➡️ Navigate to Subdomain (subdomain.html)
+            </button>
+        </div>
+
+        <div class="cookie-inspector">
+            <h4>🍪 Cookie Inspector (analytics_session_id):</h4>
+            <div id="cookie-display">Loading...</div>
+        </div>
+
+        <div class="note">
+            <strong>⚠️ Setup Required:</strong><br>
+            1. Add your Segment Analytics.js 2.0 snippet in the script section below<br>
+            2. Configure Amplitude (Actions) destination in your Segment workspace<br>
+            3. Test by navigating between this page and subdomain.html
+        </div>
+    </div>
+
+    <script>
+        // =================================================================
+        // INSERT YOUR SEGMENT ANALYTICS.JS 2.0 SNIPPET HERE
+        // =================================================================
+        // Example:
+        // !function(){var analytics=window.analytics=window.analytics||[];
+        // if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&
+        // console.error("Segment snippet included twice.");else{analytics.invoked=!0;
+        // ... rest of snippet ...
+        // analytics.load("YOUR_WRITE_KEY");
+        // analytics.page();}
+        // }();
+        
+        // YOUR SEGMENT SNIPPET HERE:
+        
+        
+
+        !function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="vCDB7HYMf9IU3VEyJesnqLKrkybRGHb2";;analytics.SNIPPET_VERSION="5.2.0";
+        analytics.load("vCDB7HYMf9IU3VEyJesnqLKrkybRGHb2");
+        analytics.page();
+        }}();
+
+        
+        // =================================================================
+        // END SEGMENT SNIPPET
+        // =================================================================
+
+        // Helper function to get cookies
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // Helper function to get from localStorage
+        function getLocalStorage(key) {
+            try {
+                return localStorage.getItem(key);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Load and display session information
+        function loadSession() {
+            // Try to get session ID from cookie
+            const sessionIdFromCookie = getCookie('analytics_session_id');
+            
+            // Try to get from localStorage (Segment might store here)
+            const ajs_user_id = getLocalStorage('ajs_user_id');
+            const ajs_anonymous_id = getLocalStorage('ajs_anonymous_id');
+            
+            // Display session ID
+            document.getElementById('session-id').textContent = 
+                sessionIdFromCookie || 'Not found in cookies';
+            
+            // Display device/anonymous ID
+            document.getElementById('device-id').textContent = 
+                'Check localStorage: ajs_user_traits';
+            
+            document.getElementById('anonymous-id').textContent = 
+                ajs_anonymous_id || 'Not found';
+            
+            // Update cookie inspector
+            updateCookieInspector();
+            
+            // Try to get session from Segment if available
+            if (typeof analytics !== 'undefined' && analytics.user) {
+                try {
+                    const user = analytics.user();
+                    if (user.anonymousId) {
+                        document.getElementById('anonymous-id').textContent = user.anonymousId();
+                    }
+                } catch (e) {
+                    console.log('Could not access Segment user:', e);
+                }
+            }
+        }
+
+        // Update cookie inspector display
+        function updateCookieInspector() {
+            const cookies = document.cookie.split(';');
+            const sessionCookies = cookies.filter(c => 
+                c.trim().includes('analytics_session') || 
+                c.trim().includes('ajs_') ||
+                c.trim().includes('amp_')
+            );
+            
+            const display = document.getElementById('cookie-display');
+            
+            if (sessionCookies.length > 0) {
+                display.innerHTML = sessionCookies.map(c => 
+                    `<div class="cookie-line">${c.trim()}</div>`
+                ).join('');
+            } else {
+                display.innerHTML = '<div class="cookie-line">No analytics cookies found. Make sure Segment is loaded.</div>';
+            }
+            
+            // Also show all cookies for debugging
+            console.log('All cookies:', document.cookie);
+            console.log('localStorage keys:', Object.keys(localStorage));
+        }
+
+        // Track a test event
+        function trackTestEvent() {
+            if (typeof analytics !== 'undefined' && analytics.track) {
+                analytics.track('Test Event from Main Domain', {
+                    location: 'main-domain',
+                    timestamp: new Date().toISOString()
+                });
+                document.getElementById('last-event').textContent = 
+                    `Test Event at ${new Date().toLocaleTimeString()}`;
+                console.log('Event tracked on main domain');
+            } else {
+                alert('Segment analytics not loaded. Please add your Segment snippet.');
+            }
+            
+            loadSession();
+        }
+
+        // Clear all data
+        function clearAllData() {
+            // Clear cookies (can't actually delete cross-domain cookies from JS, but we can try)
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            // Clear localStorage
+            localStorage.clear();
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            
+            alert('Cleared all cookies and storage. Refresh the page to start fresh.');
+            loadSession();
+        }
+
+        // Navigate to subdomain
+        function navigateToSubdomain() {
+            window.location.href = 'subdomain.html';
+        }
+
+        // Load session info on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(loadSession, 1000); // Wait a bit for Segment to load
+            
+            // Refresh every 2 seconds to show live updates
+            setInterval(loadSession, 2000);
+        });
+    </script>
+</body>
+</html>
